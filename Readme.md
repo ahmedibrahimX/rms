@@ -21,7 +21,7 @@
 3. Refactor the code and make sure no test cases are broken as a result.
 
 # CI
-> I added a very simple CI pipeline using Github Actions to run the test suite and build the project's artifact.
+> I added a very simple CI pipeline using Github Actions to run the test suite and build the project's artifact and publish it to Github packages.
 
 # Database design
 > **Disclaimer:** I draw an initial ERD after reading the requirements to get an insight of how this can be modeled,
