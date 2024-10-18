@@ -13,6 +13,13 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>rms</name>
 	<description>Coding challenge</description>
+	<distributionManagement>
+		<repository>
+			<id>github</id>
+			<name>Github Packages</name>
+			<url>https://maven.pkg.github.com/ahmedibrahimX/rms</url>
+		</repository>
+	</distributionManagement>
 	<url/>
 	<licenses>
 		<license/>

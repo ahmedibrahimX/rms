@@ -11,6 +11,9 @@ on:
 jobs:
   build:
     runs-on: ${{matrix.os}}
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -51,5 +54,18 @@ jobs:
       - name: Run test suite
         run: mvn -DDATABASE_URL='jdbc:postgresql://localhost:5432/rms' -DDATABASE_USERNAME=postgres -DDATABASE_PASSWORD=postgres test
 
-      - name: Build artifact
-        run: mvn package -DskipTests install
+      - name: Build and publish
+        run: mvn --batch-mode deploy -Dmaven.test.skip
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+#      - name: Build Maven project
+#        run: |
+#          mvn -B package --file pom.xml -Dmaven.test.skip
+#          mkdir staging && cp target/*.jar staging
+
+#      - name: Persist workflow data as artifacts
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: github-actions-artifact
+#          path: staging
