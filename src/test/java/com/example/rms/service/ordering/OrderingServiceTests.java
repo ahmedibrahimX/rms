@@ -3,22 +3,18 @@ package com.example.rms.service.ordering;
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.*;
 import com.example.rms.service.OrderingService;
+import com.example.rms.service.StockService;
 import com.example.rms.service.model.RequestedProductDetails;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,11 +24,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class OrderingServiceTests {
     @Mock
-    private ProductRepo productRepo;
-    @Mock
     private ProductIngredientRepo productIngredientRepo;
     @Mock
     private IngredientStockRepo ingredientStockRepo;
+    @Mock
+    private StockService stockService;
     @Mock
     private OrderRepo orderRepo;
     @Mock
@@ -40,10 +36,13 @@ public class OrderingServiceTests {
     @Captor
     private ArgumentCaptor<Order> orderCaptor;
     @Captor
-    private ArgumentCaptor<List<IngredientStock>> ingredientStockCaptor;
-    @Captor
     private ArgumentCaptor<List<OrderItem>> orderItemCaptor;
+    @Captor
+    private ArgumentCaptor<UUID> branchIdCaptor;
+    @Captor
+    private ArgumentCaptor<Map<Long, Integer>> consumedIngredientsInGramsCaptor;
 
+    @InjectMocks
     private OrderingService orderingService;
 
     private final UUID merchantId1 = UUID.randomUUID();
@@ -74,19 +73,10 @@ public class OrderingServiceTests {
     private final UUID product3Ingredient3Id = UUID.randomUUID();
     private final ProductIngredient product3Ingredient3 = new ProductIngredient(product3Ingredient3Id, productId3, ingredientId3, 50);
 
-    @BeforeEach
-    public void setup() {
-        orderingService = new OrderingService(orderRepo, productRepo, productIngredientRepo, ingredientStockRepo, orderItemRepo);
-    }
-
     @Test
     @DisplayName("Happy scenario. Order succeeds, No alerts.")
     public void happyScenario_shouldSucceed() throws Exception {
         when(productIngredientRepo.findAllByProductIdIn(any())).thenReturn(List.of(product1Ingredient1, product1Ingredient2, product2Ingredient1, product2Ingredient3, product3Ingredient3));
-        IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
-        IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
-        IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
-        when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
         when(orderRepo.save(any())).thenReturn(new Order(1L, branchId1, customerId1, "PLACED"));
 
         List<RequestedProductDetails> productRequests = List.of(new RequestedProductDetails(productId1, 2),
@@ -97,14 +87,16 @@ public class OrderingServiceTests {
         assertEquals("PLACED", orderCaptor.getValue().status());
         assertEquals(branchId1, orderCaptor.getValue().branchId());
         assertEquals(customerId1, orderCaptor.getValue().customerId());
-        verify(ingredientStockRepo, times(1)).saveAll(ingredientStockCaptor.capture());
-        Map<UUID, IngredientStock> updatedStock = ingredientStockCaptor.getValue().stream().collect(Collectors.toMap(IngredientStock::id, s -> s));
-        BigDecimal expectedValue1 = BigDecimal.valueOf(Integer.MAX_VALUE).subtract(BigDecimal.valueOf(100 * 2 + 200).divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP));
-        assertEquals(expectedValue1, updatedStock.get(ingredientStock1.id()).amountInKilos());
-        BigDecimal expectedValue2 = BigDecimal.valueOf(Integer.MAX_VALUE).subtract(BigDecimal.valueOf(50 * 2).divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP));
-        assertEquals(expectedValue2, updatedStock.get(ingredientStock2.id()).amountInKilos());
-        BigDecimal expectedValue3 = BigDecimal.valueOf(Integer.MAX_VALUE).subtract(BigDecimal.valueOf(100 + 50).divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP));
-        assertEquals(expectedValue3, updatedStock.get(ingredientStock3.id()).amountInKilos());
+        Map<Long, Integer> expectedConsumedIngredientsInGrams = new HashMap<>();
+        expectedConsumedIngredientsInGrams.put(1L, 400);
+        expectedConsumedIngredientsInGrams.put(2L, 100);
+        expectedConsumedIngredientsInGrams.put(3L, 150);
+        verify(stockService, times(1)).updateStock(branchIdCaptor.capture(), consumedIngredientsInGramsCaptor.capture());
+        assertEquals(branchId1, branchIdCaptor.getValue());
+        assertEquals(3, consumedIngredientsInGramsCaptor.getValue().size());
+        assertEquals(400, consumedIngredientsInGramsCaptor.getValue().get(1L));
+        assertEquals(100, consumedIngredientsInGramsCaptor.getValue().get(2L));
+        assertEquals(150, consumedIngredientsInGramsCaptor.getValue().get(3L));
         verify(orderItemRepo, times(1)).saveAll(orderItemCaptor.capture());
         assertEquals(4, orderItemCaptor.getValue().size());
         Map<Long, Long> orderItemsCountPerProduct = orderItemCaptor.getValue().stream().filter(oi -> Long.valueOf(1L).equals(oi.orderId()))
@@ -123,18 +115,6 @@ public class OrderingServiceTests {
     @Test
     @DisplayName("Order product(s) not found under merchant. Should fail with descriptive exception")
     public void productNotFound_shouldFailWithDescriptiveException() throws Exception {
-        throw new Exception("Not implemented");
-    }
-
-    @Test
-    @DisplayName("Product(s) with insufficient ingredient(s) branch stock. Should fail with descriptive exception")
-    public void insufficientIngredients_shouldFailWithDescriptiveException() throws Exception {
-        throw new Exception("Not implemented");
-    }
-
-    @Test
-    @DisplayName("Sufficient ingredients for order but ingredient(s) branch stock will hit the threshold for the first time. Should succeed but alert the merchant about those first hits.")
-    public void sufficientIngredientsButOneOrMoreIngredientStocksHitThresholdForFirstTime_shouldSucceed_alertMerchant() throws Exception {
         throw new Exception("Not implemented");
     }
 }
