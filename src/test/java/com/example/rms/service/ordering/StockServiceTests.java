@@ -2,12 +2,7 @@ package com.example.rms.service.ordering;
 
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.IngredientStockRepo;
-import com.example.rms.infra.repo.OrderItemRepo;
-import com.example.rms.infra.repo.OrderRepo;
-import com.example.rms.infra.repo.ProductIngredientRepo;
-import com.example.rms.service.OrderingService;
 import com.example.rms.service.StockService;
-import com.example.rms.service.model.RequestedProductDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,8 +37,8 @@ public class StockServiceTests {
     private final Long ingredientId3 = 3L;
 
     @Test
-    @DisplayName("Happy scenario. Update ingredient stocks accurately based on consumed amounts. Stock update succeeds, No alerts.")
-    public void happyScenario_updateIngredientsStockAccurately_shouldSucceed() throws Exception {
+    @DisplayName("Happy scenario. Consume ingredients and update stock accurately based on consumed amounts. Stock update succeeds, No alerts.")
+    public void happyScenario_consumeIngredientsAndUpdateStockAccurately_shouldSucceed() throws Exception {
         IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
@@ -53,7 +48,7 @@ public class StockServiceTests {
         consumedIngredientAmountInGrams.put(1L, 400);
         consumedIngredientAmountInGrams.put(2L, 100);
         consumedIngredientAmountInGrams.put(3L, 150);
-        stockService.updateStock(branchId1, consumedIngredientAmountInGrams);
+        stockService.consumeIngredients(branchId1, consumedIngredientAmountInGrams);
 
         verify(ingredientStockRepo, times(1)).saveAll(ingredientStockCaptor.capture());
         Map<UUID, IngredientStock> updatedStock = ingredientStockCaptor.getValue().stream().collect(Collectors.toMap(IngredientStock::id, s -> s));

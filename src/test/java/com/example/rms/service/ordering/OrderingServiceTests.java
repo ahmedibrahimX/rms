@@ -91,7 +91,7 @@ public class OrderingServiceTests {
         expectedConsumedIngredientsInGrams.put(1L, 400);
         expectedConsumedIngredientsInGrams.put(2L, 100);
         expectedConsumedIngredientsInGrams.put(3L, 150);
-        verify(stockService, times(1)).updateStock(branchIdCaptor.capture(), consumedIngredientsInGramsCaptor.capture());
+        verify(stockService, times(1)).consumeIngredients(branchIdCaptor.capture(), consumedIngredientsInGramsCaptor.capture());
         assertEquals(branchId1, branchIdCaptor.getValue());
         assertEquals(3, consumedIngredientsInGramsCaptor.getValue().size());
         assertEquals(400, consumedIngredientsInGramsCaptor.getValue().get(1L));

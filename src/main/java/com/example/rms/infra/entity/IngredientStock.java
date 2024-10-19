@@ -46,13 +46,16 @@ public class IngredientStock implements Persistable<UUID> {
     @Builder.Default
     private boolean isNewEntry = true;
 
+    @Version
+    private Long version;
+
     public IngredientStock(UUID id, UUID branchId, Long ingredientId, BigDecimal amountInKilos, BigDecimal maxCapacityInKilos) {
-        this(id, new Branch().id(branchId), branchId, new Ingredient().id(ingredientId), ingredientId, amountInKilos, maxCapacityInKilos, true);
+        this(id, new Branch().id(branchId), branchId, new Ingredient().id(ingredientId), ingredientId, amountInKilos, maxCapacityInKilos, true, 0L);
     }
 
     // copy constructor
     public IngredientStock(IngredientStock that) {
-        this(that.id, new Branch().id(that.branchId), that.branchId, new Ingredient().id(that.ingredientId), that.ingredientId, that.amountInKilos, that.maxCapacityInKilos, false);
+        this(that.id, new Branch().id(that.branchId), that.branchId, new Ingredient().id(that.ingredientId), that.ingredientId, that.amountInKilos, that.maxCapacityInKilos, false, that.version);
     }
 
     @Override
