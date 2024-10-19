@@ -33,6 +33,10 @@ public class OrderItem {
     @Column(name = "order_id", nullable = false, insertable = false, updatable = false)
     private Long orderId;
 
+    public OrderItem(Long productId, Long orderId) {
+        this(null, new Product().id(productId), productId, new Order().id(orderId), orderId);
+    }
+
     public OrderItem(UUID id, Long productId, Long orderId) {
         this(id, new Product().id(productId), productId, new Order().id(orderId), orderId);
     }

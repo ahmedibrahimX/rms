@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,6 +41,7 @@ public class OrderingServiceTests {
     private ArgumentCaptor<Order> orderCaptor;
     @Captor
     private ArgumentCaptor<List<IngredientStock>> ingredientStockCaptor;
+    @Captor
     private ArgumentCaptor<List<OrderItem>> orderItemCaptor;
 
     private OrderingService orderingService;
@@ -75,18 +77,17 @@ public class OrderingServiceTests {
     @BeforeEach
     public void setup() {
         orderingService = new OrderingService(orderRepo, productRepo, productIngredientRepo, ingredientStockRepo, orderItemRepo);
-        when(productIngredientRepo.findAllByProductId(productId1)).thenReturn(List.of(product1Ingredient1, product1Ingredient2));
-        when(productIngredientRepo.findAllByProductId(productId2)).thenReturn(List.of(product2Ingredient1, product2Ingredient3));
-        when(productIngredientRepo.findAllByProductId(productId3)).thenReturn(List.of(product3Ingredient3));
     }
 
     @Test
     @DisplayName("Happy scenario. Order succeeds, No alerts.")
     public void happyScenario_shouldSucceed() throws Exception {
-        IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(Integer.MAX_VALUE));
-        IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE));
-        IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE));
-        when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(List.of(ingredientStock1, ingredientStock2, ingredientStock3));
+        when(productIngredientRepo.findAllByProductIdIn(any())).thenReturn(List.of(product1Ingredient1, product1Ingredient2, product2Ingredient1, product2Ingredient3, product3Ingredient3));
+        IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
+        IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
+        IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
+        when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
+        when(orderRepo.save(any())).thenReturn(new Order(1L, branchId1, customerId1, "PLACED"));
 
         List<RequestedProductDetails> productRequests = List.of(new RequestedProductDetails(productId1, 2),
                 new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
@@ -94,6 +95,7 @@ public class OrderingServiceTests {
 
         verify(orderRepo, times(1)).save(orderCaptor.capture());
         assertEquals("PLACED", orderCaptor.getValue().status());
+        assertEquals(branchId1, orderCaptor.getValue().branchId());
         assertEquals(customerId1, orderCaptor.getValue().customerId());
         verify(ingredientStockRepo, times(1)).saveAll(ingredientStockCaptor.capture());
         Map<UUID, IngredientStock> updatedStock = ingredientStockCaptor.getValue().stream().collect(Collectors.toMap(IngredientStock::id, s -> s));
@@ -105,7 +107,7 @@ public class OrderingServiceTests {
         assertEquals(expectedValue3, updatedStock.get(ingredientStock3.id()).amountInKilos());
         verify(orderItemRepo, times(1)).saveAll(orderItemCaptor.capture());
         assertEquals(4, orderItemCaptor.getValue().size());
-        Map<Long, Long> orderItemsCountPerProduct = orderItemCaptor.getValue().stream().filter(oi -> oi.orderId().equals(orderCaptor.getValue().id()))
+        Map<Long, Long> orderItemsCountPerProduct = orderItemCaptor.getValue().stream().filter(oi -> Long.valueOf(1L).equals(oi.orderId()))
                 .collect(Collectors.groupingBy(OrderItem::productId, Collectors.counting()));
         assertEquals(2, orderItemsCountPerProduct.get(1L));
         assertEquals(1, orderItemsCountPerProduct.get(2L));

@@ -11,5 +11,5 @@ import java.util.UUID;
 
 @Repository
 public interface IngredientStockRepo extends JpaRepository<IngredientStock, UUID> {
-    List<IngredientStock> findByBranchIdAndIngredientIdIn(UUID branchId, Set<Long> ingredientIds);
+    Set<IngredientStock> findByBranchIdAndIngredientIdIn(UUID branchId, Set<Long> ingredientIds);
 }

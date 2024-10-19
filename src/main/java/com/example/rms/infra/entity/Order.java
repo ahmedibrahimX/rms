@@ -36,7 +36,11 @@ public class Order {
     @Column(name = "status", nullable = false)
     private String status;
 
-    public Order(Long productId, UUID branchId, UUID customerId, String status) {
-        this(productId, new Branch().id(branchId), branchId, new Customer().id(customerId), customerId, status);
+    public Order(UUID branchId, UUID customerId, String status) {
+        this(null, branchId, customerId, status);
+    }
+
+    public Order(Long id, UUID branchId, UUID customerId, String status) {
+        this(id, new Branch().id(branchId), branchId, new Customer().id(customerId), customerId, status);
     }
 }
