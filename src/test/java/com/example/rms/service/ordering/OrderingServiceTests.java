@@ -2,8 +2,12 @@ package com.example.rms.service.ordering;
 
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.*;
+import com.example.rms.service.OrderPreparationService;
 import com.example.rms.service.OrderingService;
+import com.example.rms.service.RecipeService;
 import com.example.rms.service.StockService;
+import com.example.rms.service.model.IngredientAmount;
+import com.example.rms.service.model.ProductRecipe;
 import com.example.rms.service.model.RequestedProductDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +22,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -26,7 +31,9 @@ public class OrderingServiceTests {
     @Mock
     private ProductIngredientRepo productIngredientRepo;
     @Mock
-    private IngredientStockRepo ingredientStockRepo;
+    private RecipeService recipeService;
+    @Mock
+    private OrderPreparationService orderPreparationService;
     @Mock
     private StockService stockService;
     @Mock
@@ -40,7 +47,13 @@ public class OrderingServiceTests {
     @Captor
     private ArgumentCaptor<UUID> branchIdCaptor;
     @Captor
-    private ArgumentCaptor<Map<Long, Integer>> consumedIngredientsInGramsCaptor;
+    private ArgumentCaptor<List<IngredientAmount>> actualTotalAmountInGrams;
+    @Captor
+    private ArgumentCaptor<Set<Long>> productIdsCaptor;
+    @Captor
+    private ArgumentCaptor<List<ProductRecipe>> recipesCaptor;
+    @Captor
+    private ArgumentCaptor<List<RequestedProductDetails>> productDetailsCaptor;
 
     @InjectMocks
     private OrderingService orderingService;
@@ -76,27 +89,31 @@ public class OrderingServiceTests {
     @Test
     @DisplayName("Happy scenario. Order succeeds, No alerts.")
     public void happyScenario_shouldSucceed() throws Exception {
-        when(productIngredientRepo.findAllByProductIdIn(any())).thenReturn(List.of(product1Ingredient1, product1Ingredient2, product2Ingredient1, product2Ingredient3, product3Ingredient3));
+        ProductRecipe productRecipe1 = new ProductRecipe(productId1, List.of(new IngredientAmount(ingredientId1, product1Ingredient1.amountInGrams()), new IngredientAmount(ingredientId2, product1Ingredient2.amountInGrams())));
+        ProductRecipe productRecipe2 = new ProductRecipe(productId2, List.of(new IngredientAmount(ingredientId1, product2Ingredient1.amountInGrams()), new IngredientAmount(ingredientId3, product2Ingredient3.amountInGrams())));
+        ProductRecipe productRecipe3 = new ProductRecipe(productId3, List.of(new IngredientAmount(ingredientId3, product3Ingredient3.amountInGrams())));
+        List<ProductRecipe> recipes = List.of(productRecipe1, productRecipe2, productRecipe3);
+        when(recipeService.getRecipes(any())).thenReturn(recipes);
+        List<IngredientAmount> totalAmountsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
+        when(orderPreparationService.getTotalAmountsInGrams(any(), any())).thenReturn(totalAmountsInGrams);
         when(orderRepo.save(any())).thenReturn(new Order(1L, branchId1, customerId1, "PLACED"));
 
-        List<RequestedProductDetails> productRequests = List.of(new RequestedProductDetails(productId1, 2),
+        List<RequestedProductDetails> requestedProductDetails = List.of(new RequestedProductDetails(productId1, 2),
                 new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
-        orderingService.placeOrder(productRequests, customerId1, branchId1);
+        orderingService.placeOrder(requestedProductDetails, customerId1, branchId1);
 
+        verify(recipeService, times(1)).getRecipes(productIdsCaptor.capture());
+        assertTrue(productIdsCaptor.getValue().containsAll(Set.of(productId1, productId2, productId3)));
+        verify(orderPreparationService).getTotalAmountsInGrams(recipesCaptor.capture(), productDetailsCaptor.capture());
+        assertEquals(recipes, recipesCaptor.getValue());
+        assertEquals(requestedProductDetails, productDetailsCaptor.getValue());
+        verify(stockService, times(1)).consumeIngredients(branchIdCaptor.capture(), actualTotalAmountInGrams.capture());
+        assertEquals(branchId1, branchIdCaptor.getValue());
+        assertEquals(totalAmountsInGrams, actualTotalAmountInGrams.getValue());
         verify(orderRepo, times(1)).save(orderCaptor.capture());
         assertEquals("PLACED", orderCaptor.getValue().status());
         assertEquals(branchId1, orderCaptor.getValue().branchId());
         assertEquals(customerId1, orderCaptor.getValue().customerId());
-        Map<Long, Integer> expectedConsumedIngredientsInGrams = new HashMap<>();
-        expectedConsumedIngredientsInGrams.put(1L, 400);
-        expectedConsumedIngredientsInGrams.put(2L, 100);
-        expectedConsumedIngredientsInGrams.put(3L, 150);
-        verify(stockService, times(1)).consumeIngredients(branchIdCaptor.capture(), consumedIngredientsInGramsCaptor.capture());
-        assertEquals(branchId1, branchIdCaptor.getValue());
-        assertEquals(3, consumedIngredientsInGramsCaptor.getValue().size());
-        assertEquals(400, consumedIngredientsInGramsCaptor.getValue().get(1L));
-        assertEquals(100, consumedIngredientsInGramsCaptor.getValue().get(2L));
-        assertEquals(150, consumedIngredientsInGramsCaptor.getValue().get(3L));
         verify(orderItemRepo, times(1)).saveAll(orderItemCaptor.capture());
         assertEquals(4, orderItemCaptor.getValue().size());
         Map<Long, Long> orderItemsCountPerProduct = orderItemCaptor.getValue().stream().filter(oi -> Long.valueOf(1L).equals(oi.orderId()))

@@ -3,6 +3,7 @@ package com.example.rms.service.ordering;
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.IngredientStockRepo;
 import com.example.rms.service.StockService;
+import com.example.rms.service.model.IngredientAmount;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,11 +45,8 @@ public class StockServiceTests {
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
 
-        Map<Long, Integer> consumedIngredientAmountInGrams = new HashMap<>();
-        consumedIngredientAmountInGrams.put(1L, 400);
-        consumedIngredientAmountInGrams.put(2L, 100);
-        consumedIngredientAmountInGrams.put(3L, 150);
-        stockService.consumeIngredients(branchId1, consumedIngredientAmountInGrams);
+        List<IngredientAmount> totalAmountsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
+        stockService.consumeIngredients(branchId1, totalAmountsInGrams);
 
         verify(ingredientStockRepo, times(1)).saveAll(ingredientStockCaptor.capture());
         Map<UUID, IngredientStock> updatedStock = ingredientStockCaptor.getValue().stream().collect(Collectors.toMap(IngredientStock::id, s -> s));
