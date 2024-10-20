@@ -13,3 +13,7 @@ spring:
         ddl-auto: update
         jdbc:
           time_zone: UTC
+ordering:
+  limit:
+    max-total-quantity: 150
+    max-product-quantity: 15
