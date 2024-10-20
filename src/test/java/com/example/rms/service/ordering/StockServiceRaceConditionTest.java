@@ -3,13 +3,12 @@ package com.example.rms.service.ordering;
 import com.example.rms.exception.model.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.*;
+import com.example.rms.service.OrderValidationService;
 import com.example.rms.service.OrderingService;
 import com.example.rms.service.model.RequestedProductDetails;
 import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -25,6 +24,8 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest
 public class StockServiceRaceConditionTest {
+    @MockBean
+    private OrderValidationService orderValidationService;
     @MockBean
     private ProductIngredientRepo productIngredientRepo;
     @SpyBean
@@ -55,6 +56,7 @@ public class StockServiceRaceConditionTest {
     @Test
     @DisplayName("Race conditions handling using optimistic locks. Should retry 3 times, if all failed then throw an exception that can be handled gracefully.")
     public void raceConditionHandlingUsingOptimisticLocks_shouldRetryThreeTimesThenThrowCustomExceptionIfAllFail() throws Exception {
+        when(orderValidationService.validate(any(), any())).thenReturn(true);
         when(productIngredientRepo.findAllByProductIdIn(any())).thenReturn(List.of(product1Ingredient1, product1Ingredient2, product2Ingredient1, product2Ingredient3, product3Ingredient3));
         IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));

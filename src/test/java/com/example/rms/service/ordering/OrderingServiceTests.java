@@ -1,11 +1,8 @@
 package com.example.rms.service.ordering;
 
+import com.example.rms.exception.model.InvalidOrderException;
 import com.example.rms.infra.entity.*;
-import com.example.rms.infra.repo.*;
-import com.example.rms.service.OrderPreparationService;
-import com.example.rms.service.OrderingService;
-import com.example.rms.service.RecipeService;
-import com.example.rms.service.StockService;
+import com.example.rms.service.*;
 import com.example.rms.service.model.IngredientAmount;
 import com.example.rms.service.model.ProductRecipe;
 import com.example.rms.service.model.RequestedProductDetails;
@@ -20,29 +17,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class OrderingServiceTests {
     @Mock
-    private ProductIngredientRepo productIngredientRepo;
+    private OrderValidationService orderValidationService;
     @Mock
     private RecipeService recipeService;
     @Mock
     private OrderPreparationService orderPreparationService;
     @Mock
     private StockService stockService;
-    @Mock
-    private OrderRepo orderRepo;
-    @Mock
-    private OrderItemRepo orderItemRepo;
     @Captor
-    private ArgumentCaptor<Order> orderCaptor;
+    private ArgumentCaptor<List<RequestedProductDetails>> productValidationDetailsCaptor;
     @Captor
-    private ArgumentCaptor<List<OrderItem>> orderItemCaptor;
+    private ArgumentCaptor<UUID> branchIdCaptor;
     @Captor
     private ArgumentCaptor<UUID> stockBranchIdCaptor;
     @Captor
@@ -94,6 +86,7 @@ public class OrderingServiceTests {
     @Test
     @DisplayName("Happy scenario. Order succeeds, No alerts.")
     public void happyScenario_shouldSucceed() throws Exception {
+        when(orderValidationService.validate(any(), any())).thenReturn(true);
         ProductRecipe productRecipe1 = new ProductRecipe(productId1, List.of(new IngredientAmount(ingredientId1, product1Ingredient1.amountInGrams()), new IngredientAmount(ingredientId2, product1Ingredient2.amountInGrams())));
         ProductRecipe productRecipe2 = new ProductRecipe(productId2, List.of(new IngredientAmount(ingredientId1, product2Ingredient1.amountInGrams()), new IngredientAmount(ingredientId3, product2Ingredient3.amountInGrams())));
         ProductRecipe productRecipe3 = new ProductRecipe(productId3, List.of(new IngredientAmount(ingredientId3, product3Ingredient3.amountInGrams())));
@@ -106,6 +99,9 @@ public class OrderingServiceTests {
                 new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
         orderingService.placeOrder(requestedProductDetails, customerId1, branchId1);
 
+        verify(orderValidationService, times(1)).validate(productValidationDetailsCaptor.capture(), branchIdCaptor.capture());
+        assertEquals(requestedProductDetails, productValidationDetailsCaptor.getValue());
+        assertEquals(branchId1, branchIdCaptor.getValue());
         verify(recipeService, times(1)).getRecipes(productIdsCaptor.capture());
         assertTrue(productIdsCaptor.getValue().containsAll(Set.of(productId1, productId2, productId3)));
         verify(orderPreparationService).getTotalAmountsInGrams(recipesCaptor.capture(), amountCalculationProductDetailsCaptor.capture());
@@ -123,12 +119,9 @@ public class OrderingServiceTests {
     @Test
     @DisplayName("Invalid product quantities. Should fail with descriptive exception")
     public void invalidQuantity_shouldFailWithDescriptiveException() throws Exception {
-        throw new Exception("Not implemented");
-    }
-
-    @Test
-    @DisplayName("Order product(s) not found under merchant. Should fail with descriptive exception")
-    public void productNotFound_shouldFailWithDescriptiveException() throws Exception {
-        throw new Exception("Not implemented");
+        when(orderValidationService.validate(any(), any())).thenReturn(false);
+        List<RequestedProductDetails> requestedProductDetails = List.of(new RequestedProductDetails(productId1, 2),
+                new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
+        assertThrows(InvalidOrderException.class, () -> orderingService.placeOrder(requestedProductDetails, customerId1, branchId1));
     }
 }
