@@ -19,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,7 +44,7 @@ public class OrderingServiceTests {
     @Captor
     private ArgumentCaptor<List<OrderItem>> orderItemCaptor;
     @Captor
-    private ArgumentCaptor<UUID> branchIdCaptor;
+    private ArgumentCaptor<UUID> stockBranchIdCaptor;
     @Captor
     private ArgumentCaptor<List<IngredientAmount>> actualTotalAmountInGrams;
     @Captor
@@ -53,7 +52,13 @@ public class OrderingServiceTests {
     @Captor
     private ArgumentCaptor<List<ProductRecipe>> recipesCaptor;
     @Captor
-    private ArgumentCaptor<List<RequestedProductDetails>> productDetailsCaptor;
+    private ArgumentCaptor<List<RequestedProductDetails>> amountCalculationProductDetailsCaptor;
+    @Captor
+    private ArgumentCaptor<UUID> orderPlacementBranchIdCaptor;
+    @Captor
+    private ArgumentCaptor<UUID> orderPlacementCustomerIdCaptor;
+    @Captor
+    private ArgumentCaptor<List<RequestedProductDetails>> orderPlacementProductDetailsCaptor;
 
     @InjectMocks
     private OrderingService orderingService;
@@ -96,7 +101,6 @@ public class OrderingServiceTests {
         when(recipeService.getRecipes(any())).thenReturn(recipes);
         List<IngredientAmount> totalAmountsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
         when(orderPreparationService.getTotalAmountsInGrams(any(), any())).thenReturn(totalAmountsInGrams);
-        when(orderRepo.save(any())).thenReturn(new Order(1L, branchId1, customerId1, "PLACED"));
 
         List<RequestedProductDetails> requestedProductDetails = List.of(new RequestedProductDetails(productId1, 2),
                 new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
@@ -104,23 +108,16 @@ public class OrderingServiceTests {
 
         verify(recipeService, times(1)).getRecipes(productIdsCaptor.capture());
         assertTrue(productIdsCaptor.getValue().containsAll(Set.of(productId1, productId2, productId3)));
-        verify(orderPreparationService).getTotalAmountsInGrams(recipesCaptor.capture(), productDetailsCaptor.capture());
+        verify(orderPreparationService).getTotalAmountsInGrams(recipesCaptor.capture(), amountCalculationProductDetailsCaptor.capture());
         assertEquals(recipes, recipesCaptor.getValue());
-        assertEquals(requestedProductDetails, productDetailsCaptor.getValue());
-        verify(stockService, times(1)).consumeIngredients(branchIdCaptor.capture(), actualTotalAmountInGrams.capture());
-        assertEquals(branchId1, branchIdCaptor.getValue());
+        assertEquals(requestedProductDetails, amountCalculationProductDetailsCaptor.getValue());
+        verify(stockService, times(1)).consumeIngredients(stockBranchIdCaptor.capture(), actualTotalAmountInGrams.capture());
+        assertEquals(branchId1, stockBranchIdCaptor.getValue());
         assertEquals(totalAmountsInGrams, actualTotalAmountInGrams.getValue());
-        verify(orderRepo, times(1)).save(orderCaptor.capture());
-        assertEquals("PLACED", orderCaptor.getValue().status());
-        assertEquals(branchId1, orderCaptor.getValue().branchId());
-        assertEquals(customerId1, orderCaptor.getValue().customerId());
-        verify(orderItemRepo, times(1)).saveAll(orderItemCaptor.capture());
-        assertEquals(4, orderItemCaptor.getValue().size());
-        Map<Long, Long> orderItemsCountPerProduct = orderItemCaptor.getValue().stream().filter(oi -> Long.valueOf(1L).equals(oi.orderId()))
-                .collect(Collectors.groupingBy(OrderItem::productId, Collectors.counting()));
-        assertEquals(2, orderItemsCountPerProduct.get(1L));
-        assertEquals(1, orderItemsCountPerProduct.get(2L));
-        assertEquals(1, orderItemsCountPerProduct.get(3L));
+        verify(orderPreparationService, times(1)).place(orderPlacementBranchIdCaptor.capture(), orderPlacementCustomerIdCaptor.capture(), orderPlacementProductDetailsCaptor.capture());
+        assertEquals(branchId1, orderPlacementBranchIdCaptor.getValue());
+        assertEquals(customerId1, orderPlacementCustomerIdCaptor.getValue());
+        assertEquals(requestedProductDetails, orderPlacementProductDetailsCaptor.getValue());
     }
 
     @Test
