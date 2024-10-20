@@ -86,7 +86,7 @@ public class OrderPreparationServiceTests {
 
         List<RequestedProductDetails> productRequests = List.of(new RequestedProductDetails(productId1, 2),
                 new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
-        OrderDetails order = orderPreparationService.place(branchId1, customerId, productRequests);
+        OrderDetails order = orderPreparationService.place(productRequests, customerId, branchId1);
 
         verify(orderRepo, times(1)).save(orderCaptor.capture());
         verify(orderRepo, times(1)).save(orderCaptor.capture());

@@ -4,6 +4,7 @@ import com.example.rms.infra.entity.Order;
 import com.example.rms.infra.entity.OrderItem;
 import com.example.rms.infra.repo.*;
 import com.example.rms.service.model.IngredientAmount;
+import com.example.rms.service.model.OrderDetails;
 import com.example.rms.service.model.ProductRecipe;
 import com.example.rms.service.model.RequestedProductDetails;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,22 +34,11 @@ public class OrderingService {
         this.stockService = stockService;
     }
 
-    public Order placeOrder(List<RequestedProductDetails> productRequests, UUID customerId, UUID branchId) {
+    public OrderDetails placeOrder(List<RequestedProductDetails> productRequests, UUID customerId, UUID branchId) {
         Set<Long> productIds = productRequests.stream().map(RequestedProductDetails::productId).collect(Collectors.toSet());
         List<ProductRecipe> recipes = recipeService.getRecipes(productIds);
         List<IngredientAmount> ingredientAmountsInGrams = orderPreparationService.getTotalAmountsInGrams(recipes, productRequests);
         stockService.consumeIngredients(branchId, ingredientAmountsInGrams);
-
-        Order newOrder = orderRepo.save(new Order(branchId, customerId, "PLACED"));
-        List<OrderItem> orderItems = new ArrayList<>();
-        for (var product : productRequests) {
-            Long productId = product.productId();
-            Integer count = product.quantity();
-            for (int i = 0; i < count; i++) {
-                orderItems.add(new OrderItem(productId, newOrder.id()));
-            }
-        }
-        orderItemRepo.saveAll(orderItems);
-        return newOrder;
+        return orderPreparationService.place(productRequests, customerId, branchId);
     }
 }

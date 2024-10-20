@@ -114,10 +114,10 @@ public class OrderingServiceTests {
         verify(stockService, times(1)).consumeIngredients(stockBranchIdCaptor.capture(), actualTotalAmountInGrams.capture());
         assertEquals(branchId1, stockBranchIdCaptor.getValue());
         assertEquals(totalAmountsInGrams, actualTotalAmountInGrams.getValue());
-        verify(orderPreparationService, times(1)).place(orderPlacementBranchIdCaptor.capture(), orderPlacementCustomerIdCaptor.capture(), orderPlacementProductDetailsCaptor.capture());
-        assertEquals(branchId1, orderPlacementBranchIdCaptor.getValue());
-        assertEquals(customerId1, orderPlacementCustomerIdCaptor.getValue());
+        verify(orderPreparationService, times(1)).place(orderPlacementProductDetailsCaptor.capture(), orderPlacementCustomerIdCaptor.capture(), orderPlacementBranchIdCaptor.capture());
         assertEquals(requestedProductDetails, orderPlacementProductDetailsCaptor.getValue());
+        assertEquals(customerId1, orderPlacementCustomerIdCaptor.getValue());
+        assertEquals(branchId1, orderPlacementBranchIdCaptor.getValue());
     }
 
     @Test
