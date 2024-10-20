@@ -3,6 +3,7 @@ package com.example.rms.service;
 import com.example.rms.exception.model.StockUpdateFailedException;
 import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
+import com.example.rms.service.model.IngredientAmount;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.retry.annotation.Backoff;
@@ -26,8 +27,9 @@ public class StockService {
     }
 
     @Retryable(value = StockUpdateFailedException.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
-    public void consumeIngredients(UUID branchId, Map<Long, Integer> consumedIngredientAmountInGrams) {
-        Set<Long> ingredientIds = consumedIngredientAmountInGrams.keySet();
+    public void consumeIngredients(UUID branchId, List<IngredientAmount> ingredientAmountsInGrams) {
+        Map<Long, Integer> amountsInGramsMap = ingredientAmountsInGrams.stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
+        Set<Long> ingredientIds = amountsInGramsMap.keySet();
         Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(branchId, ingredientIds).stream()
                 .collect(Collectors.toMap(IngredientStock::ingredientId, stock -> stock));
 
@@ -36,7 +38,7 @@ public class StockService {
             Long ingredientId = currentStock.getKey();
             IngredientStock updated = new IngredientStock(currentStock.getValue());
             BigDecimal previousAmountInKilos = updated.amountInKilos();
-            BigDecimal consumedAmountInKilos = BigDecimal.valueOf(consumedIngredientAmountInGrams.get(ingredientId))
+            BigDecimal consumedAmountInKilos = BigDecimal.valueOf(amountsInGramsMap.get(ingredientId))
                     .divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP);
             BigDecimal updatedAmountInKilos = previousAmountInKilos.subtract(consumedAmountInKilos);
             updated.amountInKilos(updatedAmountInKilos);
