@@ -29,4 +29,8 @@ public record OrderPreparationDetails(
     public OrderPreparationDetails(OrderWithRecipe order, List<IngredientAmount> consumption) {
         this(order.branchId(), order.customerId(), order.orderItems(), order.recipes(), consumption);
     }
+
+    public OrderPreparationDetails(OrderWithConsumption order) {
+        this(order.branchId(), order.customerId(), order.orderItems(), order.recipes(), order.consumption());
+    }
 }

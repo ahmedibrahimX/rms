@@ -1,16 +1,18 @@
 package com.example.rms.service;
 
+import com.example.rms.service.event.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.InsufficientIngredientsException;
 import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
 import com.example.rms.service.model.OrderPreparationDetails;
 import com.example.rms.service.model.IngredientAmount;
-import com.example.rms.service.model.interfaces.OrderBase;
 import com.example.rms.service.model.interfaces.OrderWithConsumption;
 import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,7 +22,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class StockConsumptionService implements Step<OrderWithConsumption, OrderBase> {
+public class StockConsumptionService implements Step<OrderWithConsumption, OrderWithConsumption> {
     private final IngredientStockRepo ingredientStockRepo;
 
     @Autowired
@@ -28,7 +30,7 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
         this.ingredientStockRepo = ingredientStockRepo;
     }
 
-    public OrderBase process(OrderWithConsumption order) {
+    public OrderWithConsumption process(OrderWithConsumption order) {
         Map<Long, Integer> amountsInGramsMap = order.consumption().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
         Set<Long> ingredientIds = amountsInGramsMap.keySet();
         Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(order.branchId(), ingredientIds).stream()
@@ -57,6 +59,12 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
             log.error("Not able to update stock. An exception was thrown {}", ex.toString());
             throw new StockUpdateFailedException(ex);
         }
+    }
+
+    @Async
+    @EventListener
+    public void OrderPlacementRevertHandler(OrderPlacementRevertedEvent event) {
+        revert(event.orderWithConsumption());
     }
 
     public void revert(OrderWithConsumption order) {
