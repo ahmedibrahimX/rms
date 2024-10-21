@@ -1,5 +1,6 @@
 package com.example.rms.service;
 
+import com.example.rms.service.exception.InsufficientIngredientsException;
 import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
@@ -41,6 +42,11 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
             BigDecimal consumedAmountInKilos = BigDecimal.valueOf(amountsInGramsMap.get(ingredientId))
                     .divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP);
             BigDecimal updatedAmountInKilos = previousAmountInKilos.subtract(consumedAmountInKilos);
+
+            if (isInsufficientStock(updatedAmountInKilos)) {
+                throw new InsufficientIngredientsException();
+            }
+
             updated.amountInKilos(updatedAmountInKilos);
             updatedStocks.add(updated);
         }
@@ -51,5 +57,9 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
             log.error("Not able to update stock. An exception was thrown {}", ex.toString());
             throw new StockUpdateFailedException(ex);
         }
+    }
+
+    private static boolean isInsufficientStock(BigDecimal updatedAmountInKilos) {
+        return updatedAmountInKilos.compareTo(BigDecimal.ZERO) < 0;
     }
 }
