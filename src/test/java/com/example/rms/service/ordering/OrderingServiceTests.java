@@ -8,6 +8,7 @@ import com.example.rms.service.model.interfaces.OrderBase;
 import com.example.rms.service.model.interfaces.OrderWithConsumption;
 import com.example.rms.service.model.interfaces.OrderWithRecipe;
 import jakarta.persistence.OptimisticLockException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,7 +47,6 @@ public class OrderingServiceTests {
     @Captor
     private ArgumentCaptor<OrderBase> orderPlacementParamCaptor;
 
-    @InjectMocks
     private OrderingService orderingService;
 
     private final UUID merchantId1 = UUID.randomUUID();
@@ -80,6 +80,10 @@ public class OrderingServiceTests {
     private final ProductRecipe productRecipe2 = new ProductRecipe(productId2, List.of(new IngredientAmount(ingredientId1, product2Ingredient1.amountInGrams()), new IngredientAmount(ingredientId3, product2Ingredient3.amountInGrams())));
     private final ProductRecipe productRecipe3 = new ProductRecipe(productId3, List.of(new IngredientAmount(ingredientId3, product3Ingredient3.amountInGrams())));
 
+    @BeforeEach
+    public void setup() {
+        orderingService = new OrderingService(orderValidationService, recipeService, consumptionCalculationService, stockConsumptionService, orderPlacementService, 3, 1000L, 2);
+    }
 
     @Test
     @DisplayName("Asserting pipeline flow for customer requesting an order")
