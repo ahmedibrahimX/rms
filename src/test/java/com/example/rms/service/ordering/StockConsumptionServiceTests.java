@@ -1,5 +1,6 @@
 package com.example.rms.service.ordering;
 
+import com.example.rms.service.exception.InsufficientIngredientsException;
 import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.IngredientStockRepo;
@@ -93,9 +94,21 @@ public class StockConsumptionServiceTests {
     }
 
     @Test
-    @DisplayName("Product(s) with insufficient ingredient(s) branch stock. Should fail with descriptive exception")
+    @DisplayName("Insufficient ingredient(s) branch stock. Should fail with descriptive exception")
     public void insufficientIngredients_shouldFailWithDescriptiveException() throws Exception {
-        throw new Exception("Not implemented");
+        IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(1), BigDecimal.valueOf(Integer.MAX_VALUE));
+        IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
+        IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
+        when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
+
+        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
+        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 1500), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
+        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
+        assertThrows(InsufficientIngredientsException.class, () -> stockConsumptionService.process(orderWithConsumption));
+
+
+        verifyNoMoreInteractions(ingredientStockRepo);
     }
 
     @Test
