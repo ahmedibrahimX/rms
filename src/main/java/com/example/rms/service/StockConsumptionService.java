@@ -59,6 +59,20 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
         }
     }
 
+    public void revert(OrderWithConsumption order) {
+        Map<Long, Integer> amountsInGramsMap = order.consumption().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
+        Set<Long> ingredientIds = amountsInGramsMap.keySet();
+        Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(order.branchId(), ingredientIds).stream()
+                .collect(Collectors.toMap(IngredientStock::ingredientId, stock -> stock));
+
+        for (var currentStock : currentStocks.entrySet()) {
+            Long ingredientId = currentStock.getKey();
+            BigDecimal consumedAmountInKilos = BigDecimal.valueOf(amountsInGramsMap.get(ingredientId))
+                    .divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP);
+            ingredientStockRepo.incrementAmountInKilos(currentStock.getValue().id(), consumedAmountInKilos);
+        }
+    }
+
     private static boolean isInsufficientStock(BigDecimal updatedAmountInKilos) {
         return updatedAmountInKilos.compareTo(BigDecimal.ZERO) < 0;
     }
