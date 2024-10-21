@@ -7,8 +7,12 @@ import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.infra.repo.OrderItemRepo;
 import com.example.rms.infra.repo.OrderRepo;
 import com.example.rms.service.OrderPlacementService;
+import com.example.rms.service.event.OrderPlacementRevertedEvent;
+import com.example.rms.service.exception.OrderPlacementFailedException;
 import com.example.rms.service.model.*;
 import com.example.rms.service.model.interfaces.OrderBase;
+import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,13 +21,16 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -33,12 +40,16 @@ public class OrderPlacementServiceTests {
     private OrderRepo orderRepo;
     @Mock
     private OrderItemRepo orderItemRepo;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
     @InjectMocks
     private OrderPlacementService orderPlacementService;
     @Captor
     private ArgumentCaptor<Order> orderCaptor;
     @Captor
     private ArgumentCaptor<List<OrderItem>> orderItemCaptor;
+    @Captor
+    private ArgumentCaptor<OrderPlacementRevertedEvent> eventCaptor;
 
     private final UUID branchId1 = UUID.randomUUID();
     private final Long ingredientId1 = 1L;
@@ -78,7 +89,7 @@ public class OrderPlacementServiceTests {
 
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderBase requestedOrder = new OrderPreparationDetails(branchId1, customerId, requestedItems);
+        OrderWithConsumption requestedOrder = new OrderPreparationDetails(branchId1, customerId, requestedItems);
         PlacedOrderDetails placedOrder = orderPlacementService.process(requestedOrder);
 
         assertEquals(1L, placedOrder.orderId());
@@ -103,5 +114,19 @@ public class OrderPlacementServiceTests {
         assertEquals(2, orderItemsCountPerProduct.get(1L));
         assertEquals(1, orderItemsCountPerProduct.get(2L));
         assertEquals(1, orderItemsCountPerProduct.get(3L));
+    }
+
+    @Test
+    @DisplayName("Order fails, should send an event and throw a descriptive exception.")
+    public void orderFails_shouldSendAnEventAndThrowDescriptiveException() throws Exception {
+        when(orderRepo.save(any())).thenThrow(new PersistenceException());
+
+        List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
+                new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
+        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        assertThrows(OrderPlacementFailedException.class, () -> orderPlacementService.process(orderWithConsumption));
+
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+        assertEquals(orderWithConsumption, eventCaptor.getValue().orderWithConsumption());
     }
 }

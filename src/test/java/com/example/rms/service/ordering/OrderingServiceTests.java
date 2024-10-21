@@ -45,7 +45,7 @@ public class OrderingServiceTests {
     @Captor
     private ArgumentCaptor<OrderWithConsumption> stockConsumptionStepParamCaptor;
     @Captor
-    private ArgumentCaptor<OrderBase> orderPlacementParamCaptor;
+    private ArgumentCaptor<OrderWithConsumption> orderPlacementParamCaptor;
 
     private OrderingService orderingService;
 
@@ -98,7 +98,7 @@ public class OrderingServiceTests {
         List<IngredientAmount> totalAmountsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
         OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipes, totalAmountsInGrams);
         when(consumptionCalculationService.process(any())).thenReturn(orderWithConsumption);
-        when(stockConsumptionService.process(any())).thenReturn(order);
+        when(stockConsumptionService.process(any())).thenReturn(orderWithConsumption);
 
         orderingService.placeOrder(order);
 
@@ -111,7 +111,7 @@ public class OrderingServiceTests {
         verify(stockConsumptionService, times(1)).process(stockConsumptionStepParamCaptor.capture());
         assertEquals(orderWithConsumption, stockConsumptionStepParamCaptor.getValue());
         verify(orderPlacementService, times(1)).process(orderPlacementParamCaptor.capture());
-        assertEquals(order, orderPlacementParamCaptor.getValue());
+        assertEquals(orderWithConsumption, orderPlacementParamCaptor.getValue());
     }
 
     @Test
