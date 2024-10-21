@@ -12,4 +12,5 @@ import java.util.UUID;
 @Repository
 public interface ProductIngredientRepo extends JpaRepository<ProductIngredient, UUID> {
     List<ProductIngredient> findAllByProductIdIn(Set<Long> productId);
+    long countByProductId(Long productId);
 }

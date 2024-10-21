@@ -1,6 +1,6 @@
 package com.example.rms.service.ordering;
 
-import com.example.rms.exception.model.StockUpdateFailedException;
+import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
 import com.example.rms.service.*;
 import com.example.rms.service.model.*;

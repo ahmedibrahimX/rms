@@ -1,14 +1,15 @@
 package com.example.rms.service;
 
-import com.example.rms.exception.model.StockUpdateFailedException;
+import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
+import com.example.rms.service.model.OrderPreparationDetails;
 import com.example.rms.service.model.IngredientAmount;
+import com.example.rms.service.model.interfaces.OrderBase;
+import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,19 +19,18 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class StockService {
+public class StockConsumptionService implements Step<OrderWithConsumption, OrderBase> {
     private final IngredientStockRepo ingredientStockRepo;
 
     @Autowired
-    public StockService(IngredientStockRepo ingredientStockRepo) {
+    public StockConsumptionService(IngredientStockRepo ingredientStockRepo) {
         this.ingredientStockRepo = ingredientStockRepo;
     }
 
-    @Retryable(value = StockUpdateFailedException.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
-    public void consumeIngredients(UUID branchId, List<IngredientAmount> ingredientAmountsInGrams) {
-        Map<Long, Integer> amountsInGramsMap = ingredientAmountsInGrams.stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
+    public OrderBase process(OrderWithConsumption order) {
+        Map<Long, Integer> amountsInGramsMap = order.consumption().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
         Set<Long> ingredientIds = amountsInGramsMap.keySet();
-        Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(branchId, ingredientIds).stream()
+        Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(order.branchId(), ingredientIds).stream()
                 .collect(Collectors.toMap(IngredientStock::ingredientId, stock -> stock));
 
         List<IngredientStock> updatedStocks = new ArrayList<>();
@@ -46,16 +46,10 @@ public class StockService {
         }
         try {
             ingredientStockRepo.saveAll(updatedStocks);
+            return new OrderPreparationDetails(order);
         } catch (Exception ex) {
             log.error("Not able to update stock. An exception was thrown {}", ex.toString());
-            throw new StockUpdateFailedException();
+            throw new StockUpdateFailedException(ex);
         }
-    }
-
-    @Recover
-    public void recover(StockUpdateFailedException ex) {
-        log.info("Recovery method called after all stock update retrials exhausted.");
-        // Can add any other logic here such as alerts for example
-        throw new StockUpdateFailedException();
     }
 }

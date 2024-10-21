@@ -1,13 +1,11 @@
 package com.example.rms.service.ordering;
 
-import com.example.rms.exception.model.StockUpdateFailedException;
+import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.IngredientStockRepo;
 import com.example.rms.service.StockConsumptionService;
 import com.example.rms.service.model.IngredientAmount;
 import com.example.rms.service.model.OrderPreparationDetails;
-import com.example.rms.service.model.ProductRecipe;
-import com.example.rms.service.model.RequestedOrderItemDetails;
 import com.example.rms.service.model.interfaces.OrderBase;
 import com.example.rms.service.model.interfaces.OrderWithConsumption;
 import com.example.rms.service.model.interfaces.OrderWithRecipe;
