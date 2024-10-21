@@ -1,5 +1,6 @@
 package com.example.rms.service.ordering;
 
+import com.example.rms.service.event.IngredientStockAlertEvent;
 import com.example.rms.service.exception.InsufficientIngredientsException;
 import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
@@ -7,16 +8,19 @@ import com.example.rms.infra.repo.IngredientStockRepo;
 import com.example.rms.service.StockConsumptionService;
 import com.example.rms.service.model.IngredientAmount;
 import com.example.rms.service.model.OrderPreparationDetails;
+import com.example.rms.service.model.StockAmount;
 import com.example.rms.service.model.interfaces.OrderBase;
 import com.example.rms.service.model.interfaces.OrderWithConsumption;
 import com.example.rms.service.model.interfaces.OrderWithRecipe;
 import com.example.rms.service.pattern.decorator.RetriableStepDecorator;
 import jakarta.persistence.OptimisticLockException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -32,20 +36,28 @@ import static org.mockito.Mockito.*;
 public class StockConsumptionServiceTests {
     @Mock
     private IngredientStockRepo ingredientStockRepo;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
     @Captor
     private ArgumentCaptor<List<IngredientStock>> ingredientStockCaptor;
     @Captor
     private ArgumentCaptor<UUID> ingredientStockIdCaptor;
     @Captor
     private ArgumentCaptor<BigDecimal> amountCaptor;
+    @Captor
+    private ArgumentCaptor<IngredientStockAlertEvent> eventCaptor;
 
-    @InjectMocks
     private StockConsumptionService stockConsumptionService;
 
     private final UUID branchId1 = UUID.randomUUID();
     private final Long ingredientId1 = 1L;
     private final Long ingredientId2 = 2L;
     private final Long ingredientId3 = 3L;
+
+    @BeforeEach
+    public void setup() {
+        stockConsumptionService = new StockConsumptionService(ingredientStockRepo, eventPublisher, 0.5);
+    }
 
     @Test
     @DisplayName("Happy scenario. Consume ingredients and update stock accurately based on consumed amounts. Stock update succeeds, No alerts.")
@@ -137,8 +149,30 @@ public class StockConsumptionServiceTests {
     }
 
     @Test
-    @DisplayName("Sufficient ingredients for order but ingredient(s) branch stock will hit the threshold for the first time. Should succeed but alert the merchant about those first hits.")
-    public void sufficientIngredientsButOneOrMoreIngredientStocksHitThresholdForFirstTime_shouldSucceed_alertMerchant() throws Exception {
-        throw new Exception("Not implemented");
+    @DisplayName("Ingredient stock is sufficient but hits the threshold for the first time. Should succeed but alert the merchant about those first hits.")
+    public void sufficientIngredientStockButHitsTheThresholdForTheFirstTime_shouldSucceed_alertMerchant() throws Exception {
+        RetriableStepDecorator<OrderWithConsumption, OrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2);
+        IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(5.4), BigDecimal.valueOf(10));
+        IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(2.4), BigDecimal.valueOf(5));
+        IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(3.05), BigDecimal.valueOf(6));
+        when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
+
+        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
+        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
+        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
+        stockConsumptionService.process(orderWithConsumption);
+
+        verify(ingredientStockRepo, times(1)).saveAll(ingredientStockCaptor.capture());
+        Map<UUID, IngredientStock> updatedStock = ingredientStockCaptor.getValue().stream().collect(Collectors.toMap(IngredientStock::id, s -> s));
+        assertEquals(5.0, updatedStock.get(ingredientStock1.id()).amountInKilos().doubleValue());
+        assertEquals(2.3, updatedStock.get(ingredientStock2.id()).amountInKilos().doubleValue());
+        assertEquals(2.9, updatedStock.get(ingredientStock3.id()).amountInKilos().doubleValue());
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+        assertEquals(branchId1, eventCaptor.getValue().branchId());
+        assertEquals(2, eventCaptor.getValue().stockAmounts().size());
+        Map<Long, StockAmount> stockAmountsHittingThreshold = eventCaptor.getValue().stockAmounts().stream().collect(Collectors.toMap(StockAmount::ingredientId, s -> s));
+        assertEquals(5.0, stockAmountsHittingThreshold.get(ingredientId1).amountInKilos().doubleValue());
+        assertEquals(2.9, stockAmountsHittingThreshold.get(ingredientId3).amountInKilos().doubleValue());
     }
 }
