@@ -15,10 +15,7 @@ import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -37,6 +34,10 @@ public class StockConsumptionServiceTests {
     private IngredientStockRepo ingredientStockRepo;
     @Captor
     private ArgumentCaptor<List<IngredientStock>> ingredientStockCaptor;
+    @Captor
+    private ArgumentCaptor<UUID> ingredientStockIdCaptor;
+    @Captor
+    private ArgumentCaptor<BigDecimal> amountCaptor;
 
     @InjectMocks
     private StockConsumptionService stockConsumptionService;
@@ -68,6 +69,30 @@ public class StockConsumptionServiceTests {
         assertEquals(expectedValue2, updatedStock.get(ingredientStock2.id()).amountInKilos());
         BigDecimal expectedValue3 = BigDecimal.valueOf(Integer.MAX_VALUE).subtract(BigDecimal.valueOf(100 + 50).divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP));
         assertEquals(expectedValue3, updatedStock.get(ingredientStock3.id()).amountInKilos());
+    }
+
+    @Test
+    @DisplayName("Reverting a consumption. Revert succeeds")
+    public void revertingConsumption_shouldSucceed() throws Exception {
+        IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.ZERO, BigDecimal.valueOf(Integer.MAX_VALUE));
+        IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.ZERO, BigDecimal.valueOf(Integer.MAX_VALUE));
+        IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.ZERO, BigDecimal.valueOf(Integer.MAX_VALUE));
+        when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
+
+        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
+        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
+        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
+        stockConsumptionService.revert(orderWithConsumption);
+
+        verify(ingredientStockRepo, times(3)).incrementAmountInKilos(ingredientStockIdCaptor.capture(), amountCaptor.capture());
+        assertEquals(ingredientStock1.id(), ingredientStockIdCaptor.getAllValues().get(0));
+        assertEquals(0.4, amountCaptor.getAllValues().get(0).doubleValue());
+        assertEquals(ingredientStock2.id(), ingredientStockIdCaptor.getAllValues().get(1));
+        assertEquals(0.1, amountCaptor.getAllValues().get(1).doubleValue());
+        assertEquals(ingredientStock3.id(), ingredientStockIdCaptor.getAllValues().get(2));
+        assertEquals(0.15, amountCaptor.getAllValues().get(2).doubleValue());
+        verifyNoMoreInteractions(ingredientStockRepo);
     }
 
     @Test
