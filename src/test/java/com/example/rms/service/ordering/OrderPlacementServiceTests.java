@@ -6,8 +6,9 @@ import com.example.rms.infra.entity.OrderItem;
 import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.infra.repo.OrderItemRepo;
 import com.example.rms.infra.repo.OrderRepo;
-import com.example.rms.service.OrderPreparationService;
+import com.example.rms.service.OrderPlacementService;
 import com.example.rms.service.model.*;
+import com.example.rms.service.model.interfaces.OrderBase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,13 +28,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class OrderPreparationServiceTests {
+public class OrderPlacementServiceTests {
     @Mock
     private OrderRepo orderRepo;
     @Mock
     private OrderItemRepo orderItemRepo;
     @InjectMocks
-    private OrderPreparationService orderPreparationService;
+    private OrderPlacementService orderPlacementService;
     @Captor
     private ArgumentCaptor<Order> orderCaptor;
     @Captor
@@ -60,34 +61,36 @@ public class OrderPreparationServiceTests {
     private ArgumentCaptor<List<IngredientStock>> ingredientStockCaptor;
 
     @Test
-    @DisplayName("Get total ingredient amounts in grams. Getting amounts succeeds.")
-    public void getTotalIngredientAmountsInGrams_shouldSucceed() throws Exception {
-        ProductRecipe productRecipe1 = new ProductRecipe(productId1, List.of(new IngredientAmount(ingredientId1, product1Ingredient1.amountInGrams()), new IngredientAmount(ingredientId2, product1Ingredient2.amountInGrams())));
-        ProductRecipe productRecipe2 = new ProductRecipe(productId2, List.of(new IngredientAmount(ingredientId1, product2Ingredient1.amountInGrams()), new IngredientAmount(ingredientId3, product2Ingredient3.amountInGrams())));
-        ProductRecipe productRecipe3 = new ProductRecipe(productId3, List.of(new IngredientAmount(ingredientId3, product3Ingredient3.amountInGrams())));
-        List<ProductRecipe> recipes = List.of(productRecipe1, productRecipe2, productRecipe3);
-
-        List<RequestedProductDetails> productRequests = List.of(new RequestedProductDetails(productId1, 2),
-                new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
-        List<IngredientAmount> amounts = orderPreparationService.getTotalAmountsInGrams(recipes, productRequests);
-
-        assertEquals(3, amounts.size());
-        Map<Long, Integer> amountsMap = amounts.stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
-        assertEquals(400, amountsMap.get(ingredientId1));
-        assertEquals(100, amountsMap.get(ingredientId2));
-        assertEquals(150, amountsMap.get(ingredientId3));
-    }
-
-    @Test
     @DisplayName("Place order by creating the order with its items. Placing succeeds.")
-    public void placeOrder_shouldSucceed() throws Exception {
+    public void processOrder_shouldSucceed() throws Exception {
         UUID customerId = UUID.randomUUID();
         when(orderRepo.save(any())).thenReturn(new Order(1L, branchId1, customerId, "PLACED"));
+        UUID orderItemId1 = UUID.randomUUID();
+        UUID orderItemId2 = UUID.randomUUID();
+        UUID orderItemId3 = UUID.randomUUID();
+        UUID orderItemId4 = UUID.randomUUID();
+        when(orderItemRepo.saveAll(any())).thenReturn(List.of(
+                new OrderItem(orderItemId1, productId1, 1L),
+                new OrderItem(orderItemId2, productId1, 1L),
+                new OrderItem(orderItemId3, productId2, 1L),
+                new OrderItem(orderItemId4, productId3, 1L)
+        ));
 
-        List<RequestedProductDetails> productRequests = List.of(new RequestedProductDetails(productId1, 2),
-                new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
-        OrderDetails order = orderPreparationService.place(productRequests, customerId, branchId1);
+        List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
+                new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
+        OrderBase requestedOrder = new OrderPreparationDetails(branchId1, customerId, requestedItems);
+        PlacedOrderDetails placedOrder = orderPlacementService.process(requestedOrder);
 
+        assertEquals(1L, placedOrder.orderId());
+        assertEquals(branchId1, placedOrder.branchId());
+        assertEquals(customerId, placedOrder.customerId());
+        assertEquals("PLACED", placedOrder.status());
+        assertEquals(4, placedOrder.orderItems().size());
+        Map<UUID, Long> orderItemProducts = placedOrder.orderItems().stream().collect(Collectors.toMap(PlacedOrderItemDetails::orderItemId, PlacedOrderItemDetails::productId));
+        assertEquals(productId1, orderItemProducts.get(orderItemId1));
+        assertEquals(productId1, orderItemProducts.get(orderItemId2));
+        assertEquals(productId2, orderItemProducts.get(orderItemId3));
+        assertEquals(productId3, orderItemProducts.get(orderItemId4));
         verify(orderRepo, times(1)).save(orderCaptor.capture());
         verify(orderRepo, times(1)).save(orderCaptor.capture());
         assertEquals("PLACED", orderCaptor.getValue().status());

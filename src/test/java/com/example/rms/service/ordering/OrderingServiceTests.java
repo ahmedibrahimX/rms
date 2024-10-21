@@ -1,11 +1,13 @@
 package com.example.rms.service.ordering;
 
-import com.example.rms.exception.model.InvalidOrderException;
+import com.example.rms.exception.model.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
 import com.example.rms.service.*;
-import com.example.rms.service.model.IngredientAmount;
-import com.example.rms.service.model.ProductRecipe;
-import com.example.rms.service.model.RequestedProductDetails;
+import com.example.rms.service.model.*;
+import com.example.rms.service.model.interfaces.OrderBase;
+import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import com.example.rms.service.model.interfaces.OrderWithRecipe;
+import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,29 +30,21 @@ public class OrderingServiceTests {
     @Mock
     private RecipeService recipeService;
     @Mock
-    private OrderPreparationService orderPreparationService;
+    private ConsumptionCalculationService consumptionCalculationService;
     @Mock
-    private StockService stockService;
+    private OrderPlacementService orderPlacementService;
+    @Mock
+    private StockConsumptionService stockConsumptionService;
     @Captor
-    private ArgumentCaptor<List<RequestedProductDetails>> productValidationDetailsCaptor;
+    private ArgumentCaptor<OrderPreparationDetails> validationStepParamCaptor;
     @Captor
-    private ArgumentCaptor<UUID> branchIdCaptor;
+    private ArgumentCaptor<OrderPreparationDetails> recipeStepParamCaptor;
     @Captor
-    private ArgumentCaptor<UUID> stockBranchIdCaptor;
+    private ArgumentCaptor<OrderWithRecipe> consumptionCalculationStepParamCaptor;
     @Captor
-    private ArgumentCaptor<List<IngredientAmount>> actualTotalAmountInGrams;
+    private ArgumentCaptor<OrderWithConsumption> stockConsumptionStepParamCaptor;
     @Captor
-    private ArgumentCaptor<Set<Long>> productIdsCaptor;
-    @Captor
-    private ArgumentCaptor<List<ProductRecipe>> recipesCaptor;
-    @Captor
-    private ArgumentCaptor<List<RequestedProductDetails>> amountCalculationProductDetailsCaptor;
-    @Captor
-    private ArgumentCaptor<UUID> orderPlacementBranchIdCaptor;
-    @Captor
-    private ArgumentCaptor<UUID> orderPlacementCustomerIdCaptor;
-    @Captor
-    private ArgumentCaptor<List<RequestedProductDetails>> orderPlacementProductDetailsCaptor;
+    private ArgumentCaptor<OrderBase> orderPlacementParamCaptor;
 
     @InjectMocks
     private OrderingService orderingService;
@@ -82,46 +76,55 @@ public class OrderingServiceTests {
     private final Product product3 = new Product(productId3, merchantId1, "product3");
     private final UUID product3Ingredient3Id = UUID.randomUUID();
     private final ProductIngredient product3Ingredient3 = new ProductIngredient(product3Ingredient3Id, productId3, ingredientId3, 50);
+    private final ProductRecipe productRecipe1 = new ProductRecipe(productId1, List.of(new IngredientAmount(ingredientId1, product1Ingredient1.amountInGrams()), new IngredientAmount(ingredientId2, product1Ingredient2.amountInGrams())));
+    private final ProductRecipe productRecipe2 = new ProductRecipe(productId2, List.of(new IngredientAmount(ingredientId1, product2Ingredient1.amountInGrams()), new IngredientAmount(ingredientId3, product2Ingredient3.amountInGrams())));
+    private final ProductRecipe productRecipe3 = new ProductRecipe(productId3, List.of(new IngredientAmount(ingredientId3, product3Ingredient3.amountInGrams())));
+
 
     @Test
-    @DisplayName("Happy scenario. Order succeeds, No alerts.")
-    public void happyScenario_shouldSucceed() throws Exception {
-        when(orderValidationService.validate(any(), any())).thenReturn(true);
-        ProductRecipe productRecipe1 = new ProductRecipe(productId1, List.of(new IngredientAmount(ingredientId1, product1Ingredient1.amountInGrams()), new IngredientAmount(ingredientId2, product1Ingredient2.amountInGrams())));
-        ProductRecipe productRecipe2 = new ProductRecipe(productId2, List.of(new IngredientAmount(ingredientId1, product2Ingredient1.amountInGrams()), new IngredientAmount(ingredientId3, product2Ingredient3.amountInGrams())));
-        ProductRecipe productRecipe3 = new ProductRecipe(productId3, List.of(new IngredientAmount(ingredientId3, product3Ingredient3.amountInGrams())));
+    @DisplayName("Asserting pipeline flow for customer requesting an order")
+    public void assertingPipelineFlow() throws Exception {
+        List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
+                new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
+        OrderBase order = new OrderPreparationDetails(branchId1, customerId1, requestedItems);
+        when(orderValidationService.process(any())).thenReturn(order);
         List<ProductRecipe> recipes = List.of(productRecipe1, productRecipe2, productRecipe3);
-        when(recipeService.getRecipes(any())).thenReturn(recipes);
+        OrderWithRecipe orderWithRecipes = new OrderPreparationDetails(order, recipes);
+        when(recipeService.process(any())).thenReturn(orderWithRecipes);
         List<IngredientAmount> totalAmountsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
-        when(orderPreparationService.getTotalAmountsInGrams(any(), any())).thenReturn(totalAmountsInGrams);
+        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipes, totalAmountsInGrams);
+        when(consumptionCalculationService.process(any())).thenReturn(orderWithConsumption);
+        when(stockConsumptionService.process(any())).thenReturn(order);
 
-        List<RequestedProductDetails> requestedProductDetails = List.of(new RequestedProductDetails(productId1, 2),
-                new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
-        orderingService.placeOrder(requestedProductDetails, customerId1, branchId1);
+        orderingService.placeOrder(order);
 
-        verify(orderValidationService, times(1)).validate(productValidationDetailsCaptor.capture(), branchIdCaptor.capture());
-        assertEquals(requestedProductDetails, productValidationDetailsCaptor.getValue());
-        assertEquals(branchId1, branchIdCaptor.getValue());
-        verify(recipeService, times(1)).getRecipes(productIdsCaptor.capture());
-        assertTrue(productIdsCaptor.getValue().containsAll(Set.of(productId1, productId2, productId3)));
-        verify(orderPreparationService).getTotalAmountsInGrams(recipesCaptor.capture(), amountCalculationProductDetailsCaptor.capture());
-        assertEquals(recipes, recipesCaptor.getValue());
-        assertEquals(requestedProductDetails, amountCalculationProductDetailsCaptor.getValue());
-        verify(stockService, times(1)).consumeIngredients(stockBranchIdCaptor.capture(), actualTotalAmountInGrams.capture());
-        assertEquals(branchId1, stockBranchIdCaptor.getValue());
-        assertEquals(totalAmountsInGrams, actualTotalAmountInGrams.getValue());
-        verify(orderPreparationService, times(1)).place(orderPlacementProductDetailsCaptor.capture(), orderPlacementCustomerIdCaptor.capture(), orderPlacementBranchIdCaptor.capture());
-        assertEquals(requestedProductDetails, orderPlacementProductDetailsCaptor.getValue());
-        assertEquals(customerId1, orderPlacementCustomerIdCaptor.getValue());
-        assertEquals(branchId1, orderPlacementBranchIdCaptor.getValue());
+        verify(orderValidationService, times(1)).process(validationStepParamCaptor.capture());
+        assertEquals(order, validationStepParamCaptor.getValue());
+        verify(recipeService, times(1)).process(recipeStepParamCaptor.capture());
+        assertEquals(order, recipeStepParamCaptor.getValue());
+        verify(consumptionCalculationService).process(consumptionCalculationStepParamCaptor.capture());
+        assertEquals(orderWithRecipes, consumptionCalculationStepParamCaptor.getValue());
+        verify(stockConsumptionService, times(1)).process(stockConsumptionStepParamCaptor.capture());
+        assertEquals(orderWithConsumption, stockConsumptionStepParamCaptor.getValue());
+        verify(orderPlacementService, times(1)).process(orderPlacementParamCaptor.capture());
+        assertEquals(order, orderPlacementParamCaptor.getValue());
     }
 
     @Test
-    @DisplayName("Invalid product quantities. Should fail with descriptive exception")
-    public void invalidQuantity_shouldFailWithDescriptiveException() throws Exception {
-        when(orderValidationService.validate(any(), any())).thenReturn(false);
-        List<RequestedProductDetails> requestedProductDetails = List.of(new RequestedProductDetails(productId1, 2),
-                new RequestedProductDetails(productId2, 1), new RequestedProductDetails(productId3, 1));
-        assertThrows(InvalidOrderException.class, () -> orderingService.placeOrder(requestedProductDetails, customerId1, branchId1));
+    @DisplayName("Testing retrial mechanism in pipeline level.")
+    public void raceConditionHandlingInPipelineLevel_shouldRetryThreeTimesThenThrowIfAllRetrialsFail() throws Exception {
+        List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
+                new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
+        OrderBase order = new OrderPreparationDetails(branchId1, customerId1, requestedItems);
+        when(orderValidationService.process(any())).thenReturn(order);
+        List<ProductRecipe> recipes = List.of(productRecipe1, productRecipe2, productRecipe3);
+        OrderWithRecipe orderWithRecipes = new OrderPreparationDetails(order, recipes);
+        when(recipeService.process(any())).thenReturn(orderWithRecipes);
+        List<IngredientAmount> totalAmountsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
+        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipes, totalAmountsInGrams);
+        when(consumptionCalculationService.process(any())).thenReturn(orderWithConsumption);
+        when(stockConsumptionService.process(any())).thenThrow(new StockUpdateFailedException(new OptimisticLockException()));
+
+        assertThrows(StockUpdateFailedException.class, () -> orderingService.placeOrder(order));
     }
 }
