@@ -55,6 +55,7 @@ public class OrderValidationService implements OrderValidationStep {
         for (RequestedOrderItemDetails item : customerOrder.orderItems()) {
             if (productIngredientRepo.countByProductId(item.productId()) == 0) throw new OrderValidationException("Product ingredients missing");
 
+            if (item.quantity() < 1) throw new OrderValidationException("Quantity cannot be less than 1.");
             if (item.quantity() > maxProductQuantity) throw new OrderValidationException("Quantity limit exceeded for a single product.");
 
             totalCount += item.quantity();
