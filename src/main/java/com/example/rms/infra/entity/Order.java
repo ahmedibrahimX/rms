@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.Accessors;
 
+import java.util.Date;
 import java.util.UUID;
 
 @Setter
@@ -36,11 +37,18 @@ public class Order {
     @Column(name = "status", nullable = false)
     private String status;
 
+    @Column(name = "placed_at", updatable = false, nullable = false)
+    private Date placedAt;
+
     public Order(UUID branchId, UUID customerId, String status) {
         this(null, branchId, customerId, status);
     }
 
     public Order(Long id, UUID branchId, UUID customerId, String status) {
-        this(id, new Branch().id(branchId), branchId, new Customer().id(customerId), customerId, status);
+        this(id, branchId, customerId, status, new Date());
+    }
+
+    public Order(Long id, UUID branchId, UUID customerId, String status, Date placedAt) {
+        this(id, new Branch().id(branchId), branchId, new Customer().id(customerId), customerId, status, placedAt);
     }
 }
