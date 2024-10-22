@@ -35,11 +35,11 @@ public class DbSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        log.info("DB Seeder Running...");
     }
 
     @Bean
     CommandLineRunner commandLineRunner() {
+        log.info("DB Seeder Running...");
         return args -> {
             Ingredient beef = ingredientRepo.save(new Ingredient("beef"));
             log.info("Created an ingredient: {}", beef);
