@@ -114,7 +114,7 @@ public class StockConsumptionServiceTests {
     @Test
     @DisplayName("Race conditions handling using optimistic locks. Should retry 3 times, if all failed then throw an exception that can be handled gracefully.")
     public void raceConditionHandlingUsingOptimisticLocks_shouldRetryThreeTimesThenThrowCustomExceptionIfAllFail() throws Exception {
-        RetriableStepDecorator<NewOrderWithConsumption, NewOrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2);
+        RetriableStepDecorator<NewOrderWithConsumption, NewOrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2, StockUpdateFailedException.class);
         IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
@@ -158,7 +158,7 @@ public class StockConsumptionServiceTests {
     @Test
     @DisplayName("Ingredient stock is sufficient but hits the threshold for the first time. Should succeed but alert the merchant about those first hits.")
     public void sufficientIngredientStockButHitsTheThresholdForTheFirstTime_shouldSucceed_alertMerchant() throws Exception {
-        RetriableStepDecorator<NewOrderWithConsumption, NewOrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2);
+        RetriableStepDecorator<NewOrderWithConsumption, NewOrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2, StockUpdateFailedException.class);
         IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(5.4), BigDecimal.valueOf(10));
         IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(2.4), BigDecimal.valueOf(5));
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(3.05), BigDecimal.valueOf(6));

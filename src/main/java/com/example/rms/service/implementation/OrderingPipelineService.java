@@ -1,6 +1,7 @@
 package com.example.rms.service.implementation;
 
 import com.example.rms.service.abstraction.*;
+import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.service.model.abstraction.NewOrder;
 import com.example.rms.service.model.implementation.PlacedOrderDetails;
 import com.example.rms.service.pattern.pipeline.Pipeline;
@@ -26,7 +27,7 @@ public class OrderingPipelineService implements OrderingPipeline {
         pipeline = new Pipeline<>(orderValidationStep)
                 .pipe(recipeStep)
                 .pipe(consumptionCalculationStep)
-                .pipe(new RetriableStepDecorator<>(stockConsumptionStep, stockUpdateMaxAttempts, stockUpdateRetrialDelayInMillis, stockUpdateRetrialDelayMultiplier))
+                .pipe(new RetriableStepDecorator<>(stockConsumptionStep, stockUpdateMaxAttempts, stockUpdateRetrialDelayInMillis, stockUpdateRetrialDelayMultiplier, StockUpdateFailedException.class))
                 .pipe(orderPlacementStep);
     }
 
