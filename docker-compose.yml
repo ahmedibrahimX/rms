@@ -1,0 +1,40 @@
+version: "3.8"  # Specify the docker-compose version
+
+services:
+  db:
+    container_name: postgres
+    image: postgres:latest
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rms  # Database name
+    ports:
+      - "5432:5432"  # Map port 5432 in the container to port 5432 on the host
+  smtp:
+    container_name: smtp4dev
+    image: rnwood/smtp4dev:v3
+    ports:
+      - "2525:25"
+      - "3000:80"
+  app:
+    container_name: rms-app
+    depends_on:
+      - db
+      - smtp
+    build:
+      context: .  # Build from the same context as builder
+      dockerfile: Dockerfile  # Specify the Dockerfile path
+    ports:
+      - "8080:8080"  # Map port 8080 in the container to port 8080 on the host
+    environment:
+      - SPRING_ACTIVE_PROFILE=local
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/rms
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SMTP_HOST=smtp4dev
+      - SMTP_PORT=25
+      - SMTP_USERNAME=test@example.com
+      - SMTP_PASSWORD=password
+
+networks:
+  my-network:
+    external: true  # Allow access from outside the docker network
