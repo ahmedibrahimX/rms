@@ -129,6 +129,17 @@ public class OrderValidationServiceTests {
     }
 
     @Test
+    @DisplayName("Product quantity less than 1. Should fail with descriptive exception.")
+    public void productQuantityLessThanOne_returnsInvalid() {
+        when(branchRepo.findById(any())).thenReturn(Optional.of(branch1Merchant1));
+        when(productRepo.countByMerchantIdAndIdIn(any(), any())).thenReturn(3L);
+        when(productIngredientRepo.countByProductId(1L)).thenReturn(2L);
+        List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, -1));
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        assertThrows(OrderValidationException.class, () -> orderValidationService.process(order));
+    }
+
+    @Test
     @DisplayName("Total quantity limit exceeded. Should fail with descriptive exception.")
     public void totalQuantityLimitExceeded_returnsInvalid() {
         when(branchRepo.findById(any())).thenReturn(Optional.of(branch1Merchant1));
