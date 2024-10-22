@@ -1,10 +1,11 @@
-package com.example.rms.service;
+package com.example.rms.service.implementation;
 
 import com.example.rms.infra.entity.Branch;
 import com.example.rms.infra.entity.Ingredient;
 import com.example.rms.infra.repo.BranchRepo;
 import com.example.rms.infra.repo.IngredientRepo;
-import com.example.rms.service.event.IngredientStockAlertEvent;
+import com.example.rms.service.abstraction.MerchantStockAlertEventHandler;
+import com.example.rms.service.event.implementation.IngredientStockAlertEvent;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,12 +17,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
-import java.util.List;
 import java.util.Optional;
 
 @Slf4j
 @Service
-public class IngredientStockAlertMailingService {
+public class MerchantStockAlertMailingService implements MerchantStockAlertEventHandler {
     private final JavaMailSender emailSender;
     private final BranchRepo branchRepo;
     private final IngredientRepo ingredientRepo;
@@ -30,7 +30,7 @@ public class IngredientStockAlertMailingService {
     private final String template = "Ingredients stock needs your attention, branch at {0} {1}, {2}, {3}, {4} for the following ingredients: \n";
 
     @Autowired
-    public IngredientStockAlertMailingService(
+    public MerchantStockAlertMailingService(
             JavaMailSender emailSender,
             BranchRepo branchRepo,
             IngredientRepo ingredientRepo,
@@ -45,7 +45,7 @@ public class IngredientStockAlertMailingService {
     @Async
     @EventListener
     @Transactional
-    public void sendMail(IngredientStockAlertEvent event) {
+    public void handle(IngredientStockAlertEvent event) {
         if (event.stockAmounts().isEmpty()) {
             log.error("Stock amounts are missing in the ingredient stock alert event.");
             return;

@@ -2,7 +2,7 @@ package com.example.rms.common.auth;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.example.rms.service.event.CustomerSyncEvent;
+import com.example.rms.service.event.implementation.CustomerSyncEvent;
 import com.example.rms.service.exception.UnauthorizedAccess;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.JoinPoint;
@@ -11,8 +11,6 @@ import org.aspectj.lang.annotation.Before;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
 
 import java.util.UUID;
 

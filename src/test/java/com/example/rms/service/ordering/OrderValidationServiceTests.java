@@ -4,7 +4,7 @@ import com.example.rms.infra.entity.Branch;
 import com.example.rms.infra.repo.BranchRepo;
 import com.example.rms.infra.repo.ProductIngredientRepo;
 import com.example.rms.infra.repo.ProductRepo;
-import com.example.rms.service.OrderValidationService;
+import com.example.rms.service.implementation.OrderValidationService;
 import com.example.rms.service.exception.OrderValidationException;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;

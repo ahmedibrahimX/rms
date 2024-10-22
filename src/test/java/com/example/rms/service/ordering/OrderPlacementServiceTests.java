@@ -6,8 +6,8 @@ import com.example.rms.infra.entity.OrderItem;
 import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.infra.repo.OrderItemRepo;
 import com.example.rms.infra.repo.OrderRepo;
-import com.example.rms.service.OrderPlacementService;
-import com.example.rms.service.event.OrderPlacementRevertedEvent;
+import com.example.rms.service.implementation.OrderPlacementService;
+import com.example.rms.service.event.implementation.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.OrderPlacementFailedException;
 import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
 import com.example.rms.service.model.abstraction.PersistedOrderItemDetails;
@@ -128,6 +128,6 @@ public class OrderPlacementServiceTests {
         assertThrows(OrderPlacementFailedException.class, () -> orderPlacementService.process(newOrderWithConsumption));
 
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
-        assertEquals(newOrderWithConsumption, eventCaptor.getValue().newOrderWithConsumption());
+        assertEquals(newOrderWithConsumption, eventCaptor.getValue().order());
     }
 }

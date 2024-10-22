@@ -2,7 +2,7 @@ package com.example.rms.service.ordering;
 
 import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.infra.repo.ProductIngredientRepo;
-import com.example.rms.service.RecipeService;
+import com.example.rms.service.implementation.RecipeService;
 import com.example.rms.service.model.abstraction.*;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;

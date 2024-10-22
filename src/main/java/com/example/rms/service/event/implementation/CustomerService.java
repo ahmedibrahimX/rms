@@ -1,14 +1,14 @@
-package com.example.rms.service;
+package com.example.rms.service.event.implementation;
 
 import com.example.rms.infra.entity.Customer;
 import com.example.rms.infra.repo.CustomerRepo;
-import com.example.rms.service.event.CustomerSyncEvent;
+import com.example.rms.service.abstraction.CustomerSyncEventHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 @Service
-public class CustomerService {
+public class CustomerService implements CustomerSyncEventHandler {
     private CustomerRepo customerRepo;
 
     @Autowired
@@ -17,7 +17,7 @@ public class CustomerService {
     }
 
     @EventListener
-    public void sync(CustomerSyncEvent event) {
+    public void handle(CustomerSyncEvent event) {
         Customer customer = Customer.builder()
                 .id(event.customerId())
                 .name(event.customerName())

@@ -1,15 +1,15 @@
-package com.example.rms.service;
+package com.example.rms.service.implementation;
 
 import com.example.rms.infra.entity.Order;
 import com.example.rms.infra.entity.OrderItem;
 import com.example.rms.infra.repo.OrderItemRepo;
 import com.example.rms.infra.repo.OrderRepo;
-import com.example.rms.service.event.OrderPlacementRevertedEvent;
+import com.example.rms.service.abstraction.OrderPlacementStep;
+import com.example.rms.service.event.implementation.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.OrderPlacementFailedException;
 import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
 import com.example.rms.service.model.implementation.PlacedOrderDetails;
 import com.example.rms.service.model.implementation.PlacedOrderItemDetails;
-import com.example.rms.service.pattern.pipeline.Step;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -19,7 +19,7 @@ import java.util.*;
 
 @Slf4j
 @Service
-public class OrderPlacementService implements Step<NewOrderWithConsumption, PlacedOrderDetails> {
+public class OrderPlacementService implements OrderPlacementStep {
     private final OrderRepo orderRepo;
     private final OrderItemRepo orderItemRepo;
     private final ApplicationEventPublisher eventPublisher;

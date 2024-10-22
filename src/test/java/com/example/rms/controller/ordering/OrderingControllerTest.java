@@ -9,7 +9,7 @@ import com.example.rms.infra.entity.OrderItem;
 import com.example.rms.infra.repo.BranchRepo;
 import com.example.rms.infra.repo.OrderItemRepo;
 import com.example.rms.infra.repo.OrderRepo;
-import com.example.rms.service.*;
+import com.example.rms.service.implementation.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles(profiles = {"local"})
 public class OrderingControllerTest {
     @SpyBean
-    OrderingService orderingService;
+    OrderingPipelineService orderingPipelineService;
     @SpyBean
     OrderValidationService orderValidationService;
     @SpyBean
@@ -54,7 +54,7 @@ public class OrderingControllerTest {
     @SpyBean
     OrderPlacementService orderPlacementService;
     @SpyBean
-    IngredientStockAlertMailingService ingredientStockAlertMailingService;
+    MerchantStockAlertMailingService merchantStockAlertMailingService;
 
     @Autowired
     MockMvc mockMvc;
@@ -96,13 +96,13 @@ public class OrderingControllerTest {
         assertEquals(Set.of(1L), orderItems.stream().map(OrderItem::productId).collect(Collectors.toSet()));
 
 
-        verify(orderingService, times(1)).placeOrder(any());
+        verify(orderingPipelineService, times(1)).placeOrder(any());
         verify(orderValidationService, times(1)).process(any());
         verify(recipeService, times(1)).process(any());
         verify(consumptionCalculationService, times(1)).process(any());
         verify(stockService, times(1)).process(any());
         verify(orderPlacementService, times(1)).process(any());
-        verify(ingredientStockAlertMailingService, times(1)).sendMail(any());
+        verify(merchantStockAlertMailingService, times(1)).handle(any());
     }
 
     @DisplayName("Unauthorized access. Should return error response")

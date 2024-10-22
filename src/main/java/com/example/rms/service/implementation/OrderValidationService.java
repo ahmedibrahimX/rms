@@ -1,14 +1,14 @@
-package com.example.rms.service;
+package com.example.rms.service.implementation;
 
 import com.example.rms.infra.entity.Branch;
 import com.example.rms.infra.repo.BranchRepo;
 import com.example.rms.infra.repo.ProductIngredientRepo;
 import com.example.rms.infra.repo.ProductRepo;
+import com.example.rms.service.abstraction.OrderValidationStep;
 import com.example.rms.service.exception.OrderValidationException;
 import com.example.rms.service.model.abstraction.NewOrder;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
-import com.example.rms.service.model.abstraction.OrderBase;
 import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class OrderValidationService implements Step<NewOrder, NewOrder> {
+public class OrderValidationService implements OrderValidationStep {
     private final ProductRepo productRepo;
     private final BranchRepo branchRepo;
     private final ProductIngredientRepo productIngredientRepo;

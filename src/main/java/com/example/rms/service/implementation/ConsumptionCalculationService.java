@@ -1,5 +1,6 @@
-package com.example.rms.service;
+package com.example.rms.service.implementation;
 
+import com.example.rms.service.abstraction.ConsumptionCalculationStep;
 import com.example.rms.service.model.abstraction.IngredientAmount;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class ConsumptionCalculationService implements Step<NewOrderWithRecipe, NewOrderWithConsumption> {
+public class ConsumptionCalculationService implements ConsumptionCalculationStep {
 
     public NewOrderWithConsumption process(NewOrderWithRecipe order) {
         Map<Long, Integer> productQuantity = order.orderItems().stream().collect(Collectors.toMap(RequestedOrderItemDetails::productId, RequestedOrderItemDetails::quantity));

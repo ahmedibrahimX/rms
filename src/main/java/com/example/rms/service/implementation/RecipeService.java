@@ -1,15 +1,14 @@
-package com.example.rms.service;
+package com.example.rms.service.implementation;
 
 import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.infra.repo.ProductIngredientRepo;
+import com.example.rms.service.abstraction.RecipeStep;
 import com.example.rms.service.model.abstraction.NewOrder;
-import com.example.rms.service.model.abstraction.OrderBase;
 import com.example.rms.service.model.abstraction.NewOrderWithRecipe;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.implementation.ProductRecipe;
 import com.example.rms.service.model.implementation.RecipeIngredientAmount;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
-import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class RecipeService implements Step<NewOrder, NewOrderWithRecipe> {
+public class RecipeService implements RecipeStep {
     private final ProductIngredientRepo productIngredientRepo;
 
     @Autowired

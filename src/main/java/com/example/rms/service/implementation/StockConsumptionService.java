@@ -1,7 +1,9 @@
-package com.example.rms.service;
+package com.example.rms.service.implementation;
 
-import com.example.rms.service.event.IngredientStockAlertEvent;
-import com.example.rms.service.event.OrderPlacementRevertedEvent;
+import com.example.rms.service.abstraction.OrderPipelineEventHandler;
+import com.example.rms.service.abstraction.StockConsumptionStep;
+import com.example.rms.service.event.implementation.IngredientStockAlertEvent;
+import com.example.rms.service.event.implementation.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.InsufficientIngredientsException;
 import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.IngredientStock;
@@ -10,7 +12,6 @@ import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.abstraction.IngredientAmount;
 import com.example.rms.service.model.StockAmount;
 import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
-import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +27,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class StockConsumptionService implements Step<NewOrderWithConsumption, NewOrderWithConsumption> {
+public class StockConsumptionService implements StockConsumptionStep, OrderPipelineEventHandler<OrderPlacementRevertedEvent> {
     private final IngredientStockRepo ingredientStockRepo;
     private final ApplicationEventPublisher eventPublisher;
     private final BigDecimal THRESHOLD;
@@ -90,8 +91,8 @@ public class StockConsumptionService implements Step<NewOrderWithConsumption, Ne
 
     @Async
     @EventListener
-    public void OrderPlacementRevertHandler(OrderPlacementRevertedEvent event) {
-        revert(event.newOrderWithConsumption());
+    public void handle(OrderPlacementRevertedEvent event) {
+        revert(event.order());
     }
 
     public void revert(NewOrderWithConsumption order) {

@@ -1,7 +1,7 @@
 package com.example.rms.service.ordering;
 
 import com.example.rms.infra.entity.ProductIngredient;
-import com.example.rms.service.ConsumptionCalculationService;
+import com.example.rms.service.implementation.ConsumptionCalculationService;
 import com.example.rms.service.model.abstraction.IngredientAmount;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;

@@ -2,7 +2,7 @@ package com.example.rms.service.ordering;
 
 import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
-import com.example.rms.service.*;
+import com.example.rms.service.implementation.*;
 import com.example.rms.service.model.abstraction.*;
 import com.example.rms.service.model.implementation.*;
 import jakarta.persistence.OptimisticLockException;
@@ -22,7 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class OrderingServiceTests {
+public class OrderingPipelineServiceTests {
     @Mock
     private OrderValidationService orderValidationService;
     @Mock
@@ -44,7 +44,7 @@ public class OrderingServiceTests {
     @Captor
     private ArgumentCaptor<NewOrderWithConsumption> orderPlacementParamCaptor;
 
-    private OrderingService orderingService;
+    private OrderingPipelineService orderingPipelineService;
 
     private final UUID merchantId1 = UUID.randomUUID();
     private final Merchant merchant1 = new Merchant(merchantId1, "merchant1", "merchant@example.com");
@@ -79,7 +79,7 @@ public class OrderingServiceTests {
 
     @BeforeEach
     public void setup() {
-        orderingService = new OrderingService(orderValidationService, recipeService, consumptionCalculationService, stockConsumptionService, orderPlacementService, 3, 1000L, 2);
+        orderingPipelineService = new OrderingPipelineService(orderValidationService, recipeService, consumptionCalculationService, stockConsumptionService, orderPlacementService, 3, 1000L, 2);
     }
 
     @Test
@@ -99,7 +99,7 @@ public class OrderingServiceTests {
         when(consumptionCalculationService.process(any())).thenReturn(newOrderWithConsumption);
         when(stockConsumptionService.process(any())).thenReturn(newOrderWithConsumption);
 
-        orderingService.placeOrder(order);
+        orderingPipelineService.placeOrder(order);
 
         verify(orderValidationService, times(1)).process(validationStepParamCaptor.capture());
         assertEquals(order, validationStepParamCaptor.getValue());
@@ -128,6 +128,6 @@ public class OrderingServiceTests {
         when(consumptionCalculationService.process(any())).thenReturn(newOrderWithConsumption);
         when(stockConsumptionService.process(any())).thenThrow(new StockUpdateFailedException(new OptimisticLockException()));
 
-        assertThrows(StockUpdateFailedException.class, () -> orderingService.placeOrder(order));
+        assertThrows(StockUpdateFailedException.class, () -> orderingPipelineService.placeOrder(order));
     }
 }

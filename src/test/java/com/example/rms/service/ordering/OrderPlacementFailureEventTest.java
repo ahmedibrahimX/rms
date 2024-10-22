@@ -2,7 +2,7 @@ package com.example.rms.service.ordering;
 
 import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
-import com.example.rms.service.event.OrderPlacementRevertedEvent;
+import com.example.rms.service.event.implementation.OrderPlacementRevertedEvent;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
 import com.example.rms.service.model.implementation.ConsumptionIngredientAmount;

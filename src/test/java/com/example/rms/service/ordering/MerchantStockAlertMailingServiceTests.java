@@ -5,8 +5,8 @@ import com.example.rms.infra.entity.Ingredient;
 import com.example.rms.infra.entity.Merchant;
 import com.example.rms.infra.repo.BranchRepo;
 import com.example.rms.infra.repo.IngredientRepo;
-import com.example.rms.service.IngredientStockAlertMailingService;
-import com.example.rms.service.event.IngredientStockAlertEvent;
+import com.example.rms.service.implementation.MerchantStockAlertMailingService;
+import com.example.rms.service.event.implementation.IngredientStockAlertEvent;
 import com.example.rms.service.model.StockAmount;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class IngredientStockAlertMailingServiceTests {
+public class MerchantStockAlertMailingServiceTests {
     @Mock
     JavaMailSender emailSender;
     @Mock
@@ -37,7 +37,7 @@ public class IngredientStockAlertMailingServiceTests {
     @Captor
     ArgumentCaptor<SimpleMailMessage> mailCaptor;
 
-    IngredientStockAlertMailingService mailingService;
+    MerchantStockAlertMailingService mailingService;
 
     private final UUID merchantId1 = UUID.randomUUID();
     private final Merchant merchant = new Merchant(merchantId1, "merchant1", "merchant1@example.com");
@@ -46,7 +46,7 @@ public class IngredientStockAlertMailingServiceTests {
 
     @BeforeEach
     public void setup() {
-        mailingService = new IngredientStockAlertMailingService(emailSender, branchRepo, ingredientRepo, "sender@example.com");
+        mailingService = new MerchantStockAlertMailingService(emailSender, branchRepo, ingredientRepo, "sender@example.com");
     }
 
     @Test
@@ -55,7 +55,7 @@ public class IngredientStockAlertMailingServiceTests {
         when(branchRepo.findById(any())).thenReturn(Optional.of(branch1Merchant1));
         when(ingredientRepo.findById(any())).thenReturn(Optional.of(new Ingredient(1L, "beef")));
 
-        mailingService.sendMail(new IngredientStockAlertEvent(this, branchId1, List.of(new StockAmount(1L, BigDecimal.valueOf(0.5)))));
+        mailingService.handle(new IngredientStockAlertEvent(this, branchId1, List.of(new StockAmount(1L, BigDecimal.valueOf(0.5)))));
 
         verify(emailSender, times(1)).send(mailCaptor.capture());
         assertEquals("sender@example.com", mailCaptor.getValue().getFrom());
@@ -66,21 +66,21 @@ public class IngredientStockAlertMailingServiceTests {
 
     @Test
     @DisplayName("Branch not found. Email should not be sent.")
-    public void branchNotFound_shouldNotSendMail() {
+    public void branchNotFound_shouldNotNotify() {
         when(branchRepo.findById(any())).thenReturn(Optional.empty());
 
-        mailingService.sendMail(new IngredientStockAlertEvent(this, branchId1, List.of(new StockAmount(1L, BigDecimal.valueOf(0.5)))));
+        mailingService.handle(new IngredientStockAlertEvent(this, branchId1, List.of(new StockAmount(1L, BigDecimal.valueOf(0.5)))));
 
         verifyNoInteractions(emailSender);
     }
 
     @Test
     @DisplayName("Ingredient not found. Email should not be sent.")
-    public void ingredientNotFound_shouldNotSendMail() {
+    public void ingredientNotFound_shouldNotNotify() {
         when(branchRepo.findById(any())).thenReturn(Optional.of(branch1Merchant1));
         when(ingredientRepo.findById(any())).thenReturn(Optional.empty());
 
-        mailingService.sendMail(new IngredientStockAlertEvent(this, branchId1, List.of(new StockAmount(1L, BigDecimal.valueOf(0.5)))));
+        mailingService.handle(new IngredientStockAlertEvent(this, branchId1, List.of(new StockAmount(1L, BigDecimal.valueOf(0.5)))));
 
         verifyNoInteractions(emailSender);
     }
