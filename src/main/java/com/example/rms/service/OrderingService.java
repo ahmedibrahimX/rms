@@ -1,7 +1,8 @@
 package com.example.rms.service;
 
-import com.example.rms.service.model.*;
-import com.example.rms.service.model.interfaces.OrderBase;
+import com.example.rms.service.model.abstraction.NewOrder;
+import com.example.rms.service.model.abstraction.OrderBase;
+import com.example.rms.service.model.implementation.PlacedPersistedOrderDetails;
 import com.example.rms.service.pattern.pipeline.Pipeline;
 import com.example.rms.service.pattern.decorator.RetriableStepDecorator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class OrderingService {
-    private final Pipeline<OrderBase, PlacedOrderDetails> pipeline;
+    private final Pipeline<NewOrder, PlacedPersistedOrderDetails> pipeline;
 
     @Autowired
     public OrderingService(OrderValidationService orderValidationService,
@@ -29,7 +30,7 @@ public class OrderingService {
                 .pipe(orderPlacementService);
     }
 
-    public PlacedOrderDetails placeOrder(OrderBase order) {
+    public PlacedPersistedOrderDetails placeOrder(NewOrder order) {
         return pipeline.execute(order);
     }
 }

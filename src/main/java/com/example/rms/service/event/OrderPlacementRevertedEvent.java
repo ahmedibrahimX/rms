@@ -1,6 +1,6 @@
 package com.example.rms.service.event;
 
-import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import org.springframework.context.ApplicationEvent;
@@ -8,9 +8,9 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 @Accessors(fluent = true)
 public class OrderPlacementRevertedEvent extends ApplicationEvent {
-    OrderWithConsumption orderWithConsumption;
-    public OrderPlacementRevertedEvent(Object source, OrderWithConsumption orderWithConsumption) {
+    NewOrderWithConsumption newOrderWithConsumption;
+    public OrderPlacementRevertedEvent(Object source, NewOrderWithConsumption newOrderWithConsumption) {
         super(source);
-        this.orderWithConsumption = orderWithConsumption;
+        this.newOrderWithConsumption = newOrderWithConsumption;
     }
 }

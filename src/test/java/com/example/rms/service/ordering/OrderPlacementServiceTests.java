@@ -9,9 +9,11 @@ import com.example.rms.infra.repo.OrderRepo;
 import com.example.rms.service.OrderPlacementService;
 import com.example.rms.service.event.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.OrderPlacementFailedException;
-import com.example.rms.service.model.*;
-import com.example.rms.service.model.interfaces.OrderBase;
-import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
+import com.example.rms.service.model.abstraction.PersistedOrderItemDetails;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
+import com.example.rms.service.model.implementation.PlacedPersistedOrderDetails;
+import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
 import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +25,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -89,15 +90,15 @@ public class OrderPlacementServiceTests {
 
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderWithConsumption requestedOrder = new OrderPreparationDetails(branchId1, customerId, requestedItems);
-        PlacedOrderDetails placedOrder = orderPlacementService.process(requestedOrder);
+        NewOrderWithConsumption requestedOrder = new NewOrderPreparationDetails(branchId1, customerId, requestedItems);
+        PlacedPersistedOrderDetails placedOrder = orderPlacementService.process(requestedOrder);
 
         assertEquals(1L, placedOrder.orderId());
         assertEquals(branchId1, placedOrder.branchId());
         assertEquals(customerId, placedOrder.customerId());
         assertEquals("PLACED", placedOrder.status());
         assertEquals(4, placedOrder.orderItems().size());
-        Map<UUID, Long> orderItemProducts = placedOrder.orderItems().stream().collect(Collectors.toMap(PlacedOrderItemDetails::orderItemId, PlacedOrderItemDetails::productId));
+        Map<UUID, Long> orderItemProducts = placedOrder.orderItems().stream().collect(Collectors.toMap(PersistedOrderItemDetails::orderItemId, PersistedOrderItemDetails::productId));
         assertEquals(productId1, orderItemProducts.get(orderItemId1));
         assertEquals(productId1, orderItemProducts.get(orderItemId2));
         assertEquals(productId2, orderItemProducts.get(orderItemId3));
@@ -123,10 +124,10 @@ public class OrderPlacementServiceTests {
 
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
-        assertThrows(OrderPlacementFailedException.class, () -> orderPlacementService.process(orderWithConsumption));
+        NewOrderWithConsumption newOrderWithConsumption = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        assertThrows(OrderPlacementFailedException.class, () -> orderPlacementService.process(newOrderWithConsumption));
 
         verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
-        assertEquals(orderWithConsumption, eventCaptor.getValue().orderWithConsumption());
+        assertEquals(newOrderWithConsumption, eventCaptor.getValue().newOrderWithConsumption());
     }
 }

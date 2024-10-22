@@ -6,9 +6,9 @@ import com.example.rms.infra.repo.OrderItemRepo;
 import com.example.rms.infra.repo.OrderRepo;
 import com.example.rms.service.event.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.OrderPlacementFailedException;
-import com.example.rms.service.model.*;
-import com.example.rms.service.model.interfaces.OrderBase;
-import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
+import com.example.rms.service.model.implementation.PlacedPersistedOrderDetails;
+import com.example.rms.service.model.implementation.PlacedOrderItemDetails;
 import com.example.rms.service.pattern.pipeline.Step;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ import java.util.*;
 
 @Slf4j
 @Service
-public class OrderPlacementService implements Step<OrderWithConsumption, PlacedOrderDetails> {
+public class OrderPlacementService implements Step<NewOrderWithConsumption, PlacedPersistedOrderDetails> {
     private final OrderRepo orderRepo;
     private final OrderItemRepo orderItemRepo;
     private final ApplicationEventPublisher eventPublisher;
@@ -30,7 +30,7 @@ public class OrderPlacementService implements Step<OrderWithConsumption, PlacedO
     }
 
     @Transactional
-    public PlacedOrderDetails process(OrderWithConsumption order) {
+    public PlacedPersistedOrderDetails process(NewOrderWithConsumption order) {
         try {
             Order newOrder = orderRepo.save(new Order(order.branchId(), order.customerId(), "PLACED"));
             List<OrderItem> orderItems = new ArrayList<>();
@@ -43,7 +43,7 @@ public class OrderPlacementService implements Step<OrderWithConsumption, PlacedO
             }
             List<OrderItem> placedOrderItems = orderItemRepo.saveAll(orderItems);
 
-            return new PlacedOrderDetails(
+            return new PlacedPersistedOrderDetails(
                     newOrder.id(),
                     newOrder.branchId(),
                     newOrder.customerId(),

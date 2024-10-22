@@ -6,12 +6,12 @@ import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.*;
 import com.example.rms.infra.repo.IngredientStockRepo;
 import com.example.rms.service.StockConsumptionService;
-import com.example.rms.service.model.IngredientAmount;
-import com.example.rms.service.model.OrderPreparationDetails;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.StockAmount;
-import com.example.rms.service.model.interfaces.OrderBase;
-import com.example.rms.service.model.interfaces.OrderWithConsumption;
-import com.example.rms.service.model.interfaces.OrderWithRecipe;
+import com.example.rms.service.model.abstraction.OrderBase;
+import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
+import com.example.rms.service.model.abstraction.NewOrderWithRecipe;
+import com.example.rms.service.model.implementation.ConsumptionIngredientAmount;
 import com.example.rms.service.pattern.decorator.RetriableStepDecorator;
 import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,11 +67,13 @@ public class StockConsumptionServiceTests {
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
 
-        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
-        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
-        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
-        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
-        stockConsumptionService.process(orderWithConsumption);
+        OrderBase orderBase = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        NewOrderWithRecipe newOrderWithRecipe = new NewOrderPreparationDetails(orderBase, new ArrayList<>());
+        List<ConsumptionIngredientAmount> totalConsumptionsInGrams = List.of(new ConsumptionIngredientAmount(ingredientId1, 400),
+                new ConsumptionIngredientAmount(ingredientId2, 100),
+                new ConsumptionIngredientAmount(ingredientId3, 150));
+        NewOrderWithConsumption newOrderWithConsumption = new NewOrderPreparationDetails(newOrderWithRecipe, totalConsumptionsInGrams);
+        stockConsumptionService.process(newOrderWithConsumption);
 
         verify(ingredientStockRepo, times(1)).saveAll(ingredientStockCaptor.capture());
         Map<UUID, IngredientStock> updatedStock = ingredientStockCaptor.getValue().stream().collect(Collectors.toMap(IngredientStock::id, s -> s));
@@ -91,11 +93,13 @@ public class StockConsumptionServiceTests {
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.ZERO, BigDecimal.valueOf(Integer.MAX_VALUE));
         when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
 
-        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
-        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
-        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
-        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
-        stockConsumptionService.revert(orderWithConsumption);
+        OrderBase orderBase = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        NewOrderWithRecipe newOrderWithRecipe = new NewOrderPreparationDetails(orderBase, new ArrayList<>());
+        List<ConsumptionIngredientAmount> totalConsumptionsInGrams = List.of(new ConsumptionIngredientAmount(ingredientId1, 400),
+                new ConsumptionIngredientAmount(ingredientId2, 100),
+                new ConsumptionIngredientAmount(ingredientId3, 150));
+        NewOrderWithConsumption newOrderWithConsumption = new NewOrderPreparationDetails(newOrderWithRecipe, totalConsumptionsInGrams);
+        stockConsumptionService.revert(newOrderWithConsumption);
 
         verify(ingredientStockRepo, times(3)).incrementAmountInKilos(ingredientStockIdCaptor.capture(), amountCaptor.capture());
         assertEquals(ingredientStock1.id(), ingredientStockIdCaptor.getAllValues().get(0));
@@ -110,7 +114,7 @@ public class StockConsumptionServiceTests {
     @Test
     @DisplayName("Race conditions handling using optimistic locks. Should retry 3 times, if all failed then throw an exception that can be handled gracefully.")
     public void raceConditionHandlingUsingOptimisticLocks_shouldRetryThreeTimesThenThrowCustomExceptionIfAllFail() throws Exception {
-        RetriableStepDecorator<OrderWithConsumption, OrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2);
+        RetriableStepDecorator<NewOrderWithConsumption, NewOrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2);
         IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
@@ -120,12 +124,14 @@ public class StockConsumptionServiceTests {
                 .thenThrow(new OptimisticLockException())
                 .thenThrow(new OptimisticLockException());
 
-        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
-        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
-        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
-        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
+        OrderBase orderBase = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        NewOrderWithRecipe newOrderWithRecipe = new NewOrderPreparationDetails(orderBase, new ArrayList<>());
+        List<ConsumptionIngredientAmount> totalConsumptionsInGrams = List.of(new ConsumptionIngredientAmount(ingredientId1, 400),
+                new ConsumptionIngredientAmount(ingredientId2, 100),
+                new ConsumptionIngredientAmount(ingredientId3, 150));
+        NewOrderWithConsumption newOrderWithConsumption = new NewOrderPreparationDetails(newOrderWithRecipe, totalConsumptionsInGrams);
 
-        assertThrows(StockUpdateFailedException.class, () -> retriableStockConsumption.process(orderWithConsumption));
+        assertThrows(StockUpdateFailedException.class, () -> retriableStockConsumption.process(newOrderWithConsumption));
 
         verify(ingredientStockRepo, times(3)).saveAll(anyCollection());
     }
@@ -138,11 +144,12 @@ public class StockConsumptionServiceTests {
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
 
-        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
-        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
-        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 1500), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
-        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
-        assertThrows(InsufficientIngredientsException.class, () -> stockConsumptionService.process(orderWithConsumption));
+        OrderBase orderBase = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        NewOrderWithRecipe newOrderWithRecipe = new NewOrderPreparationDetails(orderBase, new ArrayList<>());
+        List<ConsumptionIngredientAmount> totalConsumptionsInGrams = List.of(new ConsumptionIngredientAmount(ingredientId1,
+                1500), new ConsumptionIngredientAmount(ingredientId2, 100), new ConsumptionIngredientAmount(ingredientId3, 150));
+        NewOrderWithConsumption newOrderWithConsumption = new NewOrderPreparationDetails(newOrderWithRecipe, totalConsumptionsInGrams);
+        assertThrows(InsufficientIngredientsException.class, () -> stockConsumptionService.process(newOrderWithConsumption));
 
 
         verifyNoMoreInteractions(ingredientStockRepo);
@@ -151,17 +158,18 @@ public class StockConsumptionServiceTests {
     @Test
     @DisplayName("Ingredient stock is sufficient but hits the threshold for the first time. Should succeed but alert the merchant about those first hits.")
     public void sufficientIngredientStockButHitsTheThresholdForTheFirstTime_shouldSucceed_alertMerchant() throws Exception {
-        RetriableStepDecorator<OrderWithConsumption, OrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2);
+        RetriableStepDecorator<NewOrderWithConsumption, NewOrderWithConsumption> retriableStockConsumption = new RetriableStepDecorator<>(stockConsumptionService, 3, 1000L, 2);
         IngredientStock ingredientStock1 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId1, BigDecimal.valueOf(5.4), BigDecimal.valueOf(10));
         IngredientStock ingredientStock2 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId2, BigDecimal.valueOf(2.4), BigDecimal.valueOf(5));
         IngredientStock ingredientStock3 = new IngredientStock(UUID.randomUUID(), branchId1, ingredientId3, BigDecimal.valueOf(3.05), BigDecimal.valueOf(6));
         when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
 
-        OrderBase orderBase = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
-        OrderWithRecipe orderWithRecipe = new OrderPreparationDetails(orderBase, new ArrayList<>());
-        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
-        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(orderWithRecipe, totalConsumptionsInGrams);
-        stockConsumptionService.process(orderWithConsumption);
+        OrderBase orderBase = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        NewOrderWithRecipe newOrderWithRecipe = new NewOrderPreparationDetails(orderBase, new ArrayList<>());
+        List<ConsumptionIngredientAmount> totalConsumptionsInGrams = List.of(new ConsumptionIngredientAmount(ingredientId1, 400), new ConsumptionIngredientAmount(ingredientId2,
+                100), new ConsumptionIngredientAmount(ingredientId3, 150));
+        NewOrderWithConsumption newOrderWithConsumption = new NewOrderPreparationDetails(newOrderWithRecipe, totalConsumptionsInGrams);
+        stockConsumptionService.process(newOrderWithConsumption);
 
         verify(ingredientStockRepo, times(1)).saveAll(ingredientStockCaptor.capture());
         Map<UUID, IngredientStock> updatedStock = ingredientStockCaptor.getValue().stream().collect(Collectors.toMap(IngredientStock::id, s -> s));

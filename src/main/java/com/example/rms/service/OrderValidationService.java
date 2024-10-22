@@ -5,10 +5,10 @@ import com.example.rms.infra.repo.BranchRepo;
 import com.example.rms.infra.repo.ProductIngredientRepo;
 import com.example.rms.infra.repo.ProductRepo;
 import com.example.rms.service.exception.OrderValidationException;
-import com.example.rms.service.model.OrderPreparationDetails;
-import com.example.rms.service.model.OrderPreparationDetails;
-import com.example.rms.service.model.RequestedOrderItemDetails;
-import com.example.rms.service.model.interfaces.OrderBase;
+import com.example.rms.service.model.abstraction.NewOrder;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
+import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
+import com.example.rms.service.model.abstraction.OrderBase;
 import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class OrderValidationService implements Step<OrderBase, OrderBase> {
+public class OrderValidationService implements Step<NewOrder, NewOrder> {
     private final ProductRepo productRepo;
     private final BranchRepo branchRepo;
     private final ProductIngredientRepo productIngredientRepo;
@@ -41,7 +41,7 @@ public class OrderValidationService implements Step<OrderBase, OrderBase> {
         this.maxTotalQuantity = maxTotalQuantity;
     }
 
-    public OrderBase process(OrderBase customerOrder) {
+    public NewOrder process(NewOrder customerOrder) {
         if (customerOrder.orderItems().isEmpty()) throw new OrderValidationException("Order has no products.");
 
         Optional<Branch> branch = branchRepo.findById(customerOrder.branchId());
@@ -60,6 +60,6 @@ public class OrderValidationService implements Step<OrderBase, OrderBase> {
             totalCount += item.quantity();
             if (totalCount > maxTotalQuantity) throw new OrderValidationException("Quantity limit exceeded for a single order.");
         }
-        return new OrderPreparationDetails(customerOrder);
+        return new NewOrderPreparationDetails(customerOrder);
     }
 }

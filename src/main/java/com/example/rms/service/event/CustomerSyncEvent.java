@@ -1,6 +1,5 @@
 package com.example.rms.service.event;
 
-import com.example.rms.service.model.interfaces.OrderWithConsumption;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import org.springframework.context.ApplicationEvent;

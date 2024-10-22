@@ -3,9 +3,9 @@ package com.example.rms.service.ordering;
 import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
 import com.example.rms.service.event.OrderPlacementRevertedEvent;
-import com.example.rms.service.model.IngredientAmount;
-import com.example.rms.service.model.OrderPreparationDetails;
-import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
+import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
+import com.example.rms.service.model.implementation.ConsumptionIngredientAmount;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -52,9 +52,11 @@ public class OrderPlacementFailureEventTest {
         IngredientStock ingredientStock3 = new IngredientStock(stockId3, branchId1, ingredientId3, BigDecimal.valueOf(Integer.MAX_VALUE), BigDecimal.valueOf(Integer.MAX_VALUE));
         when(ingredientStockRepo.findByBranchIdAndIngredientIdIn(any(), any())).thenReturn(Set.of(ingredientStock1, ingredientStock2, ingredientStock3));
 
-        List<IngredientAmount> totalConsumptionsInGrams = List.of(new IngredientAmount(ingredientId1, 400), new IngredientAmount(ingredientId2, 100), new IngredientAmount(ingredientId3, 150));
-        OrderWithConsumption orderWithConsumption = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>(), new ArrayList<>(), totalConsumptionsInGrams);
-        eventPublisher.publishEvent(new OrderPlacementRevertedEvent(this, orderWithConsumption));
+        List<ConsumptionIngredientAmount> totalConsumptionsInGrams = List.of(new ConsumptionIngredientAmount(ingredientId1, 400),
+                new ConsumptionIngredientAmount(ingredientId2, 100),
+                new ConsumptionIngredientAmount(ingredientId3, 150));
+        NewOrderWithConsumption newOrderWithConsumption = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>(), new ArrayList<>(), totalConsumptionsInGrams);
+        eventPublisher.publishEvent(new OrderPlacementRevertedEvent(this, newOrderWithConsumption));
 
         verify(ingredientStockRepo, times(3)).incrementAmountInKilos(stockIdCaptor.capture(), amountCaptor.capture());
         assertEquals(stockId1, stockIdCaptor.getAllValues().get(0));

@@ -6,10 +6,10 @@ import com.example.rms.service.exception.InsufficientIngredientsException;
 import com.example.rms.service.exception.StockUpdateFailedException;
 import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
-import com.example.rms.service.model.OrderPreparationDetails;
-import com.example.rms.service.model.IngredientAmount;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
+import com.example.rms.service.model.abstraction.IngredientAmount;
 import com.example.rms.service.model.StockAmount;
-import com.example.rms.service.model.interfaces.OrderWithConsumption;
+import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
 import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class StockConsumptionService implements Step<OrderWithConsumption, OrderWithConsumption> {
+public class StockConsumptionService implements Step<NewOrderWithConsumption, NewOrderWithConsumption> {
     private final IngredientStockRepo ingredientStockRepo;
     private final ApplicationEventPublisher eventPublisher;
     private final BigDecimal THRESHOLD;
@@ -40,7 +40,7 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
         this.THRESHOLD = BigDecimal.valueOf(threshold);
     }
 
-    public OrderWithConsumption process(OrderWithConsumption order) {
+    public NewOrderWithConsumption process(NewOrderWithConsumption order) {
         Map<Long, Integer> amountsInGramsMap = order.consumption().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
         Set<Long> ingredientIds = amountsInGramsMap.keySet();
         Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(order.branchId(), ingredientIds).stream()
@@ -73,7 +73,7 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
             if (!stocksAmountsHittingThreshold.isEmpty()) {
                 eventPublisher.publishEvent(new IngredientStockAlertEvent(this, order.branchId(), stocksAmountsHittingThreshold));
             }
-            return new OrderPreparationDetails(order);
+            return new NewOrderPreparationDetails(order);
         } catch (Exception ex) {
             log.error("Not able to update stock. An exception was thrown {}", ex.toString());
             throw new StockUpdateFailedException(ex);
@@ -91,10 +91,10 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
     @Async
     @EventListener
     public void OrderPlacementRevertHandler(OrderPlacementRevertedEvent event) {
-        revert(event.orderWithConsumption());
+        revert(event.newOrderWithConsumption());
     }
 
-    public void revert(OrderWithConsumption order) {
+    public void revert(NewOrderWithConsumption order) {
         Map<Long, Integer> amountsInGramsMap = order.consumption().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
         Set<Long> ingredientIds = amountsInGramsMap.keySet();
         Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(order.branchId(), ingredientIds).stream()

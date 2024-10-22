@@ -6,8 +6,8 @@ import com.example.rms.infra.repo.ProductIngredientRepo;
 import com.example.rms.infra.repo.ProductRepo;
 import com.example.rms.service.OrderValidationService;
 import com.example.rms.service.exception.OrderValidationException;
-import com.example.rms.service.model.OrderPreparationDetails;
-import com.example.rms.service.model.RequestedOrderItemDetails;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
+import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ public class OrderValidationServiceTests {
 
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderPreparationDetails order = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
         orderValidationService.process(order);
 
         verify(branchRepo, times(1)).findById(branchIdCaptor.capture());
@@ -76,7 +76,7 @@ public class OrderValidationServiceTests {
     @Test
     @DisplayName("No product details provided. Should fail with descriptive exception.")
     public void noProductDetailsProvided_returnsInvalid() {
-        OrderPreparationDetails order = new OrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), new ArrayList<>());
         assertThrows(OrderValidationException.class, () -> orderValidationService.process(order));
 
         verifyNoInteractions(branchRepo);
@@ -89,7 +89,7 @@ public class OrderValidationServiceTests {
         when(branchRepo.findById(any())).thenReturn(Optional.empty());
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderPreparationDetails order = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
         assertThrows(OrderValidationException.class, () -> orderValidationService.process(order));
     }
 
@@ -100,7 +100,7 @@ public class OrderValidationServiceTests {
         when(productRepo.countByMerchantIdAndIdIn(any(), any())).thenReturn(2L);
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderPreparationDetails order = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
         assertThrows(OrderValidationException.class, () -> orderValidationService.process(order));
     }
 
@@ -112,7 +112,7 @@ public class OrderValidationServiceTests {
         when(productIngredientRepo.countByProductId(1L)).thenReturn(0L);
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderPreparationDetails order = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
         assertThrows(OrderValidationException.class, () -> orderValidationService.process(order));
     }
 
@@ -124,7 +124,7 @@ public class OrderValidationServiceTests {
         when(productIngredientRepo.countByProductId(1L)).thenReturn(2L);
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 6),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderPreparationDetails order = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
         assertThrows(OrderValidationException.class, () -> orderValidationService.process(order));
     }
 
@@ -138,7 +138,7 @@ public class OrderValidationServiceTests {
         when(productIngredientRepo.countByProductId(3L)).thenReturn(1L);
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 5),
                 new RequestedOrderItemDetails(productId2, 5), new RequestedOrderItemDetails(productId3, 1));
-        OrderPreparationDetails order = new OrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
+        NewOrderPreparationDetails order = new NewOrderPreparationDetails(branchId1, UUID.randomUUID(), requestedItems);
         assertThrows(OrderValidationException.class, () -> orderValidationService.process(order));
     }
 }

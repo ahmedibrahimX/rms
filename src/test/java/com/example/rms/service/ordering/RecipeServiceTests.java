@@ -3,12 +3,9 @@ package com.example.rms.service.ordering;
 import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.infra.repo.ProductIngredientRepo;
 import com.example.rms.service.RecipeService;
-import com.example.rms.service.model.IngredientAmount;
-import com.example.rms.service.model.OrderPreparationDetails;
-import com.example.rms.service.model.ProductRecipe;
-import com.example.rms.service.model.RequestedOrderItemDetails;
-import com.example.rms.service.model.interfaces.OrderBase;
-import com.example.rms.service.model.interfaces.OrderWithRecipe;
+import com.example.rms.service.model.abstraction.*;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
+import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,11 +51,11 @@ public class RecipeServiceTests {
 
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
-        OrderBase order = new OrderPreparationDetails(UUID.randomUUID(), UUID.randomUUID(), requestedItems);
-        OrderWithRecipe orderWithRecipe = recipeService.process(order);
+        NewOrder order = new NewOrderPreparationDetails(UUID.randomUUID(), UUID.randomUUID(), requestedItems);
+        NewOrderWithRecipe newOrderWithRecipe = recipeService.process(order);
 
-        assertEquals(3, orderWithRecipe.recipes().size());
-        Map<Long, Map<Long, Integer>> productIngredientAmounts = orderWithRecipe.recipes().stream().collect(Collectors.toMap(ProductRecipe::productId, amounts -> amounts.ingredientAmounts().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams))));
+        assertEquals(3, newOrderWithRecipe.recipes().size());
+        Map<Long, Map<Long, Integer>> productIngredientAmounts = newOrderWithRecipe.recipes().stream().collect(Collectors.toMap(Recipe::productId, amounts -> amounts.ingredientAmounts().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams))));
         assertEquals(product1Ingredient1.amountInGrams(), productIngredientAmounts.get(productId1).get(ingredientId1));
         assertEquals(product1Ingredient2.amountInGrams(), productIngredientAmounts.get(productId1).get(ingredientId2));
         assertEquals(product2Ingredient1.amountInGrams(), productIngredientAmounts.get(productId2).get(ingredientId1));

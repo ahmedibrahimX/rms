@@ -2,9 +2,13 @@ package com.example.rms.service;
 
 import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.infra.repo.ProductIngredientRepo;
-import com.example.rms.service.model.*;
-import com.example.rms.service.model.interfaces.OrderBase;
-import com.example.rms.service.model.interfaces.OrderWithRecipe;
+import com.example.rms.service.model.abstraction.NewOrder;
+import com.example.rms.service.model.abstraction.OrderBase;
+import com.example.rms.service.model.abstraction.NewOrderWithRecipe;
+import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
+import com.example.rms.service.model.implementation.ProductRecipe;
+import com.example.rms.service.model.implementation.RecipeIngredientAmount;
+import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
 import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class RecipeService implements Step<OrderBase, OrderWithRecipe> {
+public class RecipeService implements Step<NewOrder, NewOrderWithRecipe> {
     private final ProductIngredientRepo productIngredientRepo;
 
     @Autowired
@@ -23,7 +27,7 @@ public class RecipeService implements Step<OrderBase, OrderWithRecipe> {
         this.productIngredientRepo = productIngredientRepo;
     }
 
-    public OrderWithRecipe process(OrderBase order) {
+    public NewOrderWithRecipe process(NewOrder order) {
         Set<Long> productIds = order.orderItems().stream().map(RequestedOrderItemDetails::productId).collect(Collectors.toSet());
         List<ProductIngredient> productIngredients = productIngredientRepo.findAllByProductIdIn(productIds);
 
@@ -31,9 +35,9 @@ public class RecipeService implements Step<OrderBase, OrderWithRecipe> {
         productIngredients.forEach(productIngredient -> {
             Long productId = productIngredient.productId();
             ProductRecipe recipe = recipes.getOrDefault(productId, new ProductRecipe(productId, new ArrayList<>()));
-            recipe.ingredientAmounts().add(new IngredientAmount(productIngredient.ingredientId(), productIngredient.amountInGrams()));
+            recipe.ingredientAmounts().add(new RecipeIngredientAmount(productIngredient.ingredientId(), productIngredient.amountInGrams()));
             recipes.put(productId, recipe);
         });
-        return new OrderPreparationDetails(order, recipes.values().stream().toList());
+        return new NewOrderPreparationDetails(order, recipes.values().stream().toList());
     }
 }
