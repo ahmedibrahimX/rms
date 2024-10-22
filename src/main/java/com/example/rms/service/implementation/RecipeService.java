@@ -27,6 +27,7 @@ public class RecipeService implements RecipeStep {
     }
 
     public NewOrderWithRecipe process(NewOrder order) {
+        log.info("Recipe step, processing...");
         Set<Long> productIds = order.orderItems().stream().map(RequestedOrderItemDetails::productId).collect(Collectors.toSet());
         List<ProductIngredient> productIngredients = productIngredientRepo.findAllByProductIdIn(productIds);
 
@@ -37,6 +38,7 @@ public class RecipeService implements RecipeStep {
             recipe.ingredientAmounts().add(new RecipeIngredientAmount(productIngredient.ingredientId(), productIngredient.amountInGrams()));
             recipes.put(productId, recipe);
         });
+        log.info("Recipe step done successfully");
         return new NewOrderPreparationDetails(order, recipes.values().stream().toList());
     }
 }

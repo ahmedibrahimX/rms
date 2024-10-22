@@ -42,6 +42,7 @@ public class OrderValidationService implements OrderValidationStep {
     }
 
     public NewOrder process(NewOrder customerOrder) {
+        log.info("Order validation step started");
         if (customerOrder.orderItems().isEmpty()) throw new OrderValidationException("Order has no products.");
 
         Optional<Branch> branch = branchRepo.findById(customerOrder.branchId());
@@ -61,6 +62,7 @@ public class OrderValidationService implements OrderValidationStep {
             totalCount += item.quantity();
             if (totalCount > maxTotalQuantity) throw new OrderValidationException("Quantity limit exceeded for a single order.");
         }
+        log.info("Order validation step done successfully...");
         return new NewOrderPreparationDetails(customerOrder);
     }
 }

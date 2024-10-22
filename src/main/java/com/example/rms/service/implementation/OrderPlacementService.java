@@ -35,6 +35,7 @@ public class OrderPlacementService implements OrderPlacementStep {
     @Transactional
     public PlacedOrderDetails process(NewOrderWithConsumption order) {
         try {
+            log.info("Order placement step, processing...");
             Order newOrder = orderRepo.save(new Order(order.branchId(), order.customerId(), PLACED.value()));
             List<OrderItem> orderItems = new ArrayList<>();
             for (var requestedDetails : order.orderItems()) {
@@ -46,6 +47,7 @@ public class OrderPlacementService implements OrderPlacementStep {
             }
             List<OrderItem> placedOrderItems = orderItemRepo.saveAll(orderItems);
 
+            log.info("Order placement step successfully done");
             return new PlacedOrderDetails(
                     newOrder.id(),
                     newOrder.branchId(),
@@ -54,6 +56,8 @@ public class OrderPlacementService implements OrderPlacementStep {
                     placedOrderItems.stream().map(item -> new PlacedOrderItemDetails(item.id(), item.productId())).toList()
             );
         } catch (Exception e) {
+            log.error("Order placement step failed: {}", e.toString());
+            log.info("Transaction will not commit, operation will revert. Order placement reverted event will be sent.");
             eventPublisher.publishEvent(new OrderPlacementRevertedEvent(this, order));
             throw new OrderPlacementFailedException(e);
         }

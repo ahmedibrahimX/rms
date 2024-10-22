@@ -46,6 +46,7 @@ public class MerchantStockAlertMailingService implements MerchantStockAlertEvent
     @EventListener
     @Transactional
     public void handle(IngredientStockAlertEvent event) {
+        log.info("Handling ingredient stock alert event...");
         if (event.stockAmounts().isEmpty()) {
             log.error("Stock amounts are missing in the ingredient stock alert event.");
             return;
@@ -77,6 +78,6 @@ public class MerchantStockAlertMailingService implements MerchantStockAlertEvent
         message.setSubject(subject);
         message.setText(body);
         emailSender.send(message);
-        log.info("Email is sent to merchant");
+        log.info("Alerting email is sent to merchant");
     }
 }

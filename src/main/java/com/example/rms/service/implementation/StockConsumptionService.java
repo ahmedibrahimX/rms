@@ -42,6 +42,7 @@ public class StockConsumptionService implements StockConsumptionStep, OrderPipel
     }
 
     public NewOrderWithConsumption process(NewOrderWithConsumption order) {
+        log.info("stock consumption step, processing...");
         Map<Long, Integer> amountsInGramsMap = order.consumption().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
         Set<Long> ingredientIds = amountsInGramsMap.keySet();
         Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(order.branchId(), ingredientIds).stream()
@@ -58,6 +59,7 @@ public class StockConsumptionService implements StockConsumptionStep, OrderPipel
             BigDecimal updatedAmountInKilos = previousAmountInKilos.subtract(consumedAmountInKilos);
 
             if (isInsufficientStock(updatedAmountInKilos)) {
+                log.error("branch {} doesn't have enough stock for making the order, will not place the order", order.branchId());
                 throw new InsufficientIngredientsException();
             }
 
@@ -72,8 +74,10 @@ public class StockConsumptionService implements StockConsumptionStep, OrderPipel
         try {
             ingredientStockRepo.saveAll(updatedStocks);
             if (!stocksAmountsHittingThreshold.isEmpty()) {
+                log.error("branch {} has some stocks hitting the threshold, an alert will be sent", order.branchId());
                 eventPublisher.publishEvent(new IngredientStockAlertEvent(this, order.branchId(), stocksAmountsHittingThreshold));
             }
+            log.info("stock consumption step done successfully");
             return new NewOrderPreparationDetails(order);
         } catch (Exception ex) {
             log.error("Not able to update stock. An exception was thrown {}", ex.toString());
@@ -96,6 +100,7 @@ public class StockConsumptionService implements StockConsumptionStep, OrderPipel
     }
 
     public void revert(NewOrderWithConsumption order) {
+        log.info("Reverting stock consumption...");
         Map<Long, Integer> amountsInGramsMap = order.consumption().stream().collect(Collectors.toMap(IngredientAmount::ingredientId, IngredientAmount::amountInGrams));
         Set<Long> ingredientIds = amountsInGramsMap.keySet();
         Map<Long, IngredientStock> currentStocks = ingredientStockRepo.findByBranchIdAndIngredientIdIn(order.branchId(), ingredientIds).stream()
@@ -107,6 +112,7 @@ public class StockConsumptionService implements StockConsumptionStep, OrderPipel
                     .divide(BigDecimal.valueOf(1000), 3, RoundingMode.HALF_UP);
             ingredientStockRepo.incrementAmountInKilos(currentStock.getValue().id(), consumedAmountInKilos);
         }
+        log.info("Stock consumption reverted");
     }
 
     private static boolean isInsufficientStock(BigDecimal updatedAmountInKilos) {

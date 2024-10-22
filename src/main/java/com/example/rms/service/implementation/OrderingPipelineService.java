@@ -6,10 +6,12 @@ import com.example.rms.service.model.abstraction.NewOrder;
 import com.example.rms.service.model.implementation.PlacedOrderDetails;
 import com.example.rms.service.pattern.pipeline.Pipeline;
 import com.example.rms.service.pattern.decorator.RetriableStepDecorator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class OrderingPipelineService implements OrderingPipeline {
     private final Pipeline<NewOrder, PlacedOrderDetails> pipeline;
@@ -32,6 +34,7 @@ public class OrderingPipelineService implements OrderingPipeline {
     }
 
     public PlacedOrderDetails placeOrder(NewOrder order) {
+        log.info("Order is now in the pipeline...");
         return pipeline.execute(order);
     }
 }

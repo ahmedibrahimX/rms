@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class ConsumptionCalculationService implements ConsumptionCalculationStep {
 
     public NewOrderWithConsumption process(NewOrderWithRecipe order) {
+        log.info("Consumption calculation step, processing...");
         Map<Long, Integer> productQuantity = order.orderItems().stream().collect(Collectors.toMap(RequestedOrderItemDetails::productId, RequestedOrderItemDetails::quantity));
         Map<Long, ConsumptionIngredientAmount> ingredientConsumptionAmounts = new HashMap<>();
         order.recipes().forEach(recipe -> {
@@ -30,6 +31,7 @@ public class ConsumptionCalculationService implements ConsumptionCalculationStep
                 ingredientConsumptionAmounts.put(ingredientId, new ConsumptionIngredientAmount(ingredientId, totalAmount.amountInGrams() + totalAmountPerProduct));
             });
         });
+        log.info("Consumption calculation step done successfully");
         return new NewOrderPreparationDetails(order, ingredientConsumptionAmounts.values().stream().toList());
     }
 }
