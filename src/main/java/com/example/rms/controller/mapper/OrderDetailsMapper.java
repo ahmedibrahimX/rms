@@ -5,7 +5,7 @@ import com.example.rms.controller.model.PlacedOrderItemResponse;
 import com.example.rms.controller.model.PlacedOrderResponse;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
-import com.example.rms.service.model.implementation.PlacedPersistedOrderDetails;
+import com.example.rms.service.model.implementation.PlacedOrderDetails;
 
 import java.util.UUID;
 
@@ -15,7 +15,7 @@ public class OrderDetailsMapper {
         return new NewOrderPreparationDetails(branchId, customerId, orderedItems);
     }
 
-    public static PlacedOrderResponse map(PlacedPersistedOrderDetails details) {
+    public static PlacedOrderResponse map(PlacedOrderDetails details) {
         var orderItems = details.orderItems().stream().map(i -> new PlacedOrderItemResponse(i.orderItemId(), i.productId())).toList();
         return new PlacedOrderResponse(details.orderId(), details.branchId(), details.customerId(), details.status(), orderItems);
     }

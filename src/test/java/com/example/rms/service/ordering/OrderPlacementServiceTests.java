@@ -12,7 +12,7 @@ import com.example.rms.service.exception.OrderPlacementFailedException;
 import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
 import com.example.rms.service.model.abstraction.PersistedOrderItemDetails;
 import com.example.rms.service.model.implementation.NewOrderPreparationDetails;
-import com.example.rms.service.model.implementation.PlacedPersistedOrderDetails;
+import com.example.rms.service.model.implementation.PlacedOrderDetails;
 import com.example.rms.service.model.implementation.RequestedOrderItemDetails;
 import jakarta.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
@@ -91,7 +91,7 @@ public class OrderPlacementServiceTests {
         List<RequestedOrderItemDetails> requestedItems = List.of(new RequestedOrderItemDetails(productId1, 2),
                 new RequestedOrderItemDetails(productId2, 1), new RequestedOrderItemDetails(productId3, 1));
         NewOrderWithConsumption requestedOrder = new NewOrderPreparationDetails(branchId1, customerId, requestedItems);
-        PlacedPersistedOrderDetails placedOrder = orderPlacementService.process(requestedOrder);
+        PlacedOrderDetails placedOrder = orderPlacementService.process(requestedOrder);
 
         assertEquals(1L, placedOrder.orderId());
         assertEquals(branchId1, placedOrder.branchId());

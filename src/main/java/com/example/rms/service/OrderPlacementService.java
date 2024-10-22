@@ -7,7 +7,7 @@ import com.example.rms.infra.repo.OrderRepo;
 import com.example.rms.service.event.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.OrderPlacementFailedException;
 import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
-import com.example.rms.service.model.implementation.PlacedPersistedOrderDetails;
+import com.example.rms.service.model.implementation.PlacedOrderDetails;
 import com.example.rms.service.model.implementation.PlacedOrderItemDetails;
 import com.example.rms.service.pattern.pipeline.Step;
 import jakarta.transaction.Transactional;
@@ -19,7 +19,7 @@ import java.util.*;
 
 @Slf4j
 @Service
-public class OrderPlacementService implements Step<NewOrderWithConsumption, PlacedPersistedOrderDetails> {
+public class OrderPlacementService implements Step<NewOrderWithConsumption, PlacedOrderDetails> {
     private final OrderRepo orderRepo;
     private final OrderItemRepo orderItemRepo;
     private final ApplicationEventPublisher eventPublisher;
@@ -30,7 +30,7 @@ public class OrderPlacementService implements Step<NewOrderWithConsumption, Plac
     }
 
     @Transactional
-    public PlacedPersistedOrderDetails process(NewOrderWithConsumption order) {
+    public PlacedOrderDetails process(NewOrderWithConsumption order) {
         try {
             Order newOrder = orderRepo.save(new Order(order.branchId(), order.customerId(), "PLACED"));
             List<OrderItem> orderItems = new ArrayList<>();
@@ -43,7 +43,7 @@ public class OrderPlacementService implements Step<NewOrderWithConsumption, Plac
             }
             List<OrderItem> placedOrderItems = orderItemRepo.saveAll(orderItems);
 
-            return new PlacedPersistedOrderDetails(
+            return new PlacedOrderDetails(
                     newOrder.id(),
                     newOrder.branchId(),
                     newOrder.customerId(),

@@ -5,7 +5,7 @@ import com.example.rms.service.model.abstraction.PersistedOrderDetails;
 import java.util.List;
 import java.util.UUID;
 
-public record PlacedPersistedOrderDetails(
+public record PlacedOrderDetails(
         Long orderId,
         UUID branchId,
         UUID customerId,
