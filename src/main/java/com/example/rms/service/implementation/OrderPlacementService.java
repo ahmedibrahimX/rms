@@ -8,6 +8,7 @@ import com.example.rms.service.abstraction.OrderPlacementStep;
 import com.example.rms.service.event.implementation.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.OrderPlacementFailedException;
 import com.example.rms.service.model.abstraction.NewOrderWithConsumption;
+import com.example.rms.service.model.enums.OrderStatus;
 import com.example.rms.service.model.implementation.PlacedOrderDetails;
 import com.example.rms.service.model.implementation.PlacedOrderItemDetails;
 import jakarta.transaction.Transactional;
@@ -16,6 +17,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+
+import static com.example.rms.service.model.enums.OrderStatus.PLACED;
 
 @Slf4j
 @Service
@@ -32,7 +35,7 @@ public class OrderPlacementService implements OrderPlacementStep {
     @Transactional
     public PlacedOrderDetails process(NewOrderWithConsumption order) {
         try {
-            Order newOrder = orderRepo.save(new Order(order.branchId(), order.customerId(), "PLACED"));
+            Order newOrder = orderRepo.save(new Order(order.branchId(), order.customerId(), PLACED.value()));
             List<OrderItem> orderItems = new ArrayList<>();
             for (var requestedDetails : order.orderItems()) {
                 Long productId = requestedDetails.productId();
