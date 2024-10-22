@@ -26,4 +26,8 @@ public class Merchant {
 
     @Column(name = "email", nullable = false, unique = true)
     private String email;
+
+    public Merchant(String name, String email) {
+        this(null, name, email);
+    }
 }

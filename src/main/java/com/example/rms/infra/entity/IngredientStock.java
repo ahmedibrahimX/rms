@@ -11,7 +11,6 @@ import java.util.UUID;
 @Builder
 @Setter
 @Getter
-@ToString
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,7 +19,7 @@ import java.util.UUID;
 @Table(name = "ingredient_stock")
 public class IngredientStock implements Persistable<UUID> {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
@@ -49,8 +48,12 @@ public class IngredientStock implements Persistable<UUID> {
     @Version
     private Long version;
 
+
+    public IngredientStock(UUID branchId, Long ingredientId, BigDecimal amountInKilos, BigDecimal maxCapacityInKilos) {
+        this(null, new Branch().id(branchId), branchId, new Ingredient().id(ingredientId), ingredientId, amountInKilos, maxCapacityInKilos, true, 0L);
+    }
     public IngredientStock(UUID id, UUID branchId, Long ingredientId, BigDecimal amountInKilos, BigDecimal maxCapacityInKilos) {
-        this(id, new Branch().id(branchId), branchId, new Ingredient().id(ingredientId), ingredientId, amountInKilos, maxCapacityInKilos, true, 0L);
+        this(id, new Branch().id(branchId), branchId, new Ingredient().id(ingredientId), ingredientId, amountInKilos, maxCapacityInKilos, false, 0L);
     }
 
     // copy constructor
@@ -66,5 +69,18 @@ public class IngredientStock implements Persistable<UUID> {
     @Override
     public boolean isNew() {
         return isNewEntry;
+    }
+
+    @Override
+    public String toString() {
+        return "IngredientStock{" +
+                "id=" + id +
+                ", branchId=" + branchId +
+                ", ingredientId=" + ingredientId +
+                ", amountInKilos=" + amountInKilos +
+                ", maxCapacityInKilos=" + maxCapacityInKilos +
+                ", isNewEntry=" + isNewEntry +
+                ", version=" + version +
+                '}';
     }
 }

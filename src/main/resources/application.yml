@@ -13,6 +13,15 @@ spring:
         ddl-auto: update
         jdbc:
           time_zone: UTC
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    smtp:
+      auth: true
+      starttls:
+        enable: true
 ordering:
   limit:
     max-total-quantity: 150

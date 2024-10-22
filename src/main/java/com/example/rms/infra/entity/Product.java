@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Setter
 @Getter
-@ToString
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,7 +29,20 @@ public class Product {
     @Column(name = "name")
     private String name;
 
+    public Product(UUID merchantId, String name) {
+        this(null, new Merchant().id(merchantId), merchantId, name);
+    }
+
     public Product(Long productId, UUID merchantId, String name) {
         this(productId, new Merchant().id(merchantId), merchantId, name);
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "id=" + id +
+                ", merchantId=" + merchantId +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

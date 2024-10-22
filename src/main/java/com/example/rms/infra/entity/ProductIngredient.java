@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Setter
 @Getter
-@ToString
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,7 +16,7 @@ import java.util.UUID;
 @Table(name = "product_ingredient")
 public class ProductIngredient {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
@@ -36,7 +35,21 @@ public class ProductIngredient {
     @Column(name = "amount_in_grams")
     private Integer amountInGrams;
 
+    public ProductIngredient(Long productId, Long ingredientId, Integer amountInGrams) {
+        this(null, new Product().id(productId), productId, new Ingredient().id(ingredientId), ingredientId, amountInGrams);
+    }
+
     public ProductIngredient(UUID id, Long productId, Long ingredientId, Integer amountInGrams) {
         this(id, new Product().id(productId), productId, new Ingredient().id(ingredientId), ingredientId, amountInGrams);
+    }
+
+    @Override
+    public String toString() {
+        return "ProductIngredient{" +
+                "id=" + id +
+                ", productId=" + productId +
+                ", ingredientId=" + ingredientId +
+                ", amountInGrams=" + amountInGrams +
+                '}';
     }
 }

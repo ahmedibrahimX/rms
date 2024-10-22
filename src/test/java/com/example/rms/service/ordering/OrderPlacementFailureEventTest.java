@@ -26,7 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
-@ActiveProfiles(profiles = {"non-async"})
+@ActiveProfiles(profiles = {"non-async", "local"})
 public class OrderPlacementFailureEventTest {
     @MockBean
     IngredientStockRepo ingredientStockRepo;

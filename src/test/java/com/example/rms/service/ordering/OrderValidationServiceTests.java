@@ -42,7 +42,7 @@ public class OrderValidationServiceTests {
 
     private final UUID merchantId1 = UUID.randomUUID();
     private final UUID branchId1 = UUID.randomUUID();
-    private final Branch branch1Merchant1 = new Branch(branchId1, merchantId1, "10", "26 July", "Zamalek", "Cairo", "Egypt");
+    private final Branch branch1Merchant1 = new Branch(branchId1, merchantId1, 10, "26 July", "Zamalek", "Cairo", "Egypt");
     private final Long productId1 = 1L;
     private final Long productId2 = 2L;
     private final Long productId3 = 3L;

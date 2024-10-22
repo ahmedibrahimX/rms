@@ -1,9 +1,7 @@
 package com.example.rms.service.ordering;
 
-import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.entity.ProductIngredient;
 import com.example.rms.service.ConsumptionCalculationService;
-import com.example.rms.service.OrderPlacementService;
 import com.example.rms.service.model.IngredientAmount;
 import com.example.rms.service.model.OrderPreparationDetails;
 import com.example.rms.service.model.ProductRecipe;
@@ -14,8 +12,6 @@ import com.example.rms.service.model.interfaces.OrderWithRecipe;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,7 +21,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 public class ConsumptionCalculationServiceTests {

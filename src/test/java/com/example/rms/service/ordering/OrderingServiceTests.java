@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -53,7 +52,7 @@ public class OrderingServiceTests {
     private final Merchant merchant1 = new Merchant(merchantId1, "merchant1", "merchant@example.com");
     private final UUID customerId1 = UUID.randomUUID();
     private final UUID branchId1 = UUID.randomUUID();
-    private final Branch branch1Merchant1 = new Branch(branchId1, merchantId1, "10", "26 July", "Zamalek", "Cairo", "Egypt");
+    private final Branch branch1Merchant1 = new Branch(branchId1, merchantId1, 10, "26 July", "Zamalek", "Cairo", "Egypt");
     private final Long ingredientId1 = 1L;
     private final Ingredient ingredient1 = new Ingredient(ingredientId1, "ingredient1");
     private final Long ingredientId2 = 2L;

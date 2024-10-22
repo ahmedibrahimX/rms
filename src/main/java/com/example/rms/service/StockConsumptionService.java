@@ -1,5 +1,6 @@
 package com.example.rms.service;
 
+import com.example.rms.service.event.IngredientStockAlertEvent;
 import com.example.rms.service.event.OrderPlacementRevertedEvent;
 import com.example.rms.service.exception.InsufficientIngredientsException;
 import com.example.rms.service.exception.StockUpdateFailedException;
@@ -7,10 +8,13 @@ import com.example.rms.infra.entity.IngredientStock;
 import com.example.rms.infra.repo.IngredientStockRepo;
 import com.example.rms.service.model.OrderPreparationDetails;
 import com.example.rms.service.model.IngredientAmount;
+import com.example.rms.service.model.StockAmount;
 import com.example.rms.service.model.interfaces.OrderWithConsumption;
 import com.example.rms.service.pattern.pipeline.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -24,10 +28,16 @@ import java.util.stream.Collectors;
 @Service
 public class StockConsumptionService implements Step<OrderWithConsumption, OrderWithConsumption> {
     private final IngredientStockRepo ingredientStockRepo;
+    private final ApplicationEventPublisher eventPublisher;
+    private final BigDecimal THRESHOLD;
 
     @Autowired
-    public StockConsumptionService(IngredientStockRepo ingredientStockRepo) {
+    public StockConsumptionService(IngredientStockRepo ingredientStockRepo,
+                                   ApplicationEventPublisher eventPublisher,
+                                   @Value("${alert.ingredient.threshold:0.5}") double threshold) {
         this.ingredientStockRepo = ingredientStockRepo;
+        this.eventPublisher = eventPublisher;
+        this.THRESHOLD = BigDecimal.valueOf(threshold);
     }
 
     public OrderWithConsumption process(OrderWithConsumption order) {
@@ -37,6 +47,7 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
                 .collect(Collectors.toMap(IngredientStock::ingredientId, stock -> stock));
 
         List<IngredientStock> updatedStocks = new ArrayList<>();
+        List<StockAmount> stocksAmountsHittingThreshold = new ArrayList<>();
         for (var currentStock : currentStocks.entrySet()) {
             Long ingredientId = currentStock.getKey();
             IngredientStock updated = new IngredientStock(currentStock.getValue());
@@ -49,16 +60,32 @@ public class StockConsumptionService implements Step<OrderWithConsumption, Order
                 throw new InsufficientIngredientsException();
             }
 
+            BigDecimal criticalCapacity = currentStock.getValue().maxCapacityInKilos().multiply(THRESHOLD);
+            if (greaterThan(previousAmountInKilos, criticalCapacity) && lessThanOrEqual(updatedAmountInKilos, criticalCapacity)) {
+                stocksAmountsHittingThreshold.add(new StockAmount(ingredientId, updatedAmountInKilos));
+            }
+
             updated.amountInKilos(updatedAmountInKilos);
             updatedStocks.add(updated);
         }
         try {
             ingredientStockRepo.saveAll(updatedStocks);
+            if (!stocksAmountsHittingThreshold.isEmpty()) {
+                eventPublisher.publishEvent(new IngredientStockAlertEvent(this, order.branchId(), stocksAmountsHittingThreshold));
+            }
             return new OrderPreparationDetails(order);
         } catch (Exception ex) {
             log.error("Not able to update stock. An exception was thrown {}", ex.toString());
             throw new StockUpdateFailedException(ex);
         }
+    }
+
+    private static boolean greaterThan(BigDecimal previousAmountInKilos, BigDecimal maxCapacity) {
+        return previousAmountInKilos.compareTo(maxCapacity) > 0;
+    }
+
+    private static boolean lessThanOrEqual(BigDecimal updatedAmountInKilos, BigDecimal maxCapacity) {
+        return updatedAmountInKilos.compareTo(maxCapacity) <= 0;
     }
 
     @Async

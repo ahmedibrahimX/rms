@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
-@EnableAsync
+@EnableAsync(proxyTargetClass = true)
 @EnableScheduling
 @Profile("!non-async")
 public class AsyncConfiguration implements AsyncConfigurer {

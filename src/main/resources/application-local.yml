@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/rms
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: create # drops and recreates all
+  mail:
+    host: localhost
+    port: 2525
+    username: test@example.com
+    password: password
+    smtp:
+      auth: false
+      starttls:
+        enable: false

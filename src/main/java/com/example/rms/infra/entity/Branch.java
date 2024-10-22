@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Setter
 @Getter
-@ToString
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,7 +16,6 @@ import java.util.UUID;
 @Table(name = "branch")
 public class Branch {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
@@ -28,7 +26,7 @@ public class Branch {
     private UUID merchantId;
 
     @Column(name = "building")
-    private String building;
+    private Integer building;
 
     @Column(name = "street")
     private String street;
@@ -42,7 +40,20 @@ public class Branch {
     @Column(name = "country")
     private String country;
 
-    public Branch(UUID branchId, UUID merchantId, String building, String street, String region, String city, String country) {
+    public Branch(UUID branchId, UUID merchantId, Integer building, String street, String region, String city, String country) {
         this(branchId, new Merchant().id(merchantId), merchantId, building, street, region, city, country);
+    }
+
+    @Override
+    public String toString() {
+        return "Branch{" +
+                "id=" + id +
+                ", merchantId=" + merchantId +
+                ", building=" + building +
+                ", street='" + street + '\'' +
+                ", region='" + region + '\'' +
+                ", city='" + city + '\'' +
+                ", country='" + country + '\'' +
+                '}';
     }
 }
